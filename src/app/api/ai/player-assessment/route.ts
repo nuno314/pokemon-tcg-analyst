@@ -6,7 +6,7 @@ import {
   getPlayerAssessment,
   getWinRateStats,
   listDecks,
-  listMatches,
+  listRecentMatchesWithLogs,
   savePlayerAssessment,
 } from "@/lib/db/queries";
 import { requireApiProfile } from "@/lib/session";
@@ -55,10 +55,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ assessment: existing, cached: true, matchCount });
     }
 
-    const [stats, decks, recent] = await Promise.all([
+    const [stats, decks, recentLogs] = await Promise.all([
       getWinRateStats(authz.session.user.id, "all"),
       listDecks(authz.session.user.id),
-      listMatches(authz.session.user.id, "all"),
+      listRecentMatchesWithLogs(authz.session.user.id, 10),
     ]);
 
     const deckStats = decks.map((d) => {
@@ -74,11 +74,13 @@ export async function POST(request: Request) {
       firstWinRate: stats.first.winRate,
       secondWinRate: stats.second.winRate,
       deckStats,
-      recent: recent.slice(0, 20).map((m) => ({
+      recent: recentLogs.map((m) => ({
         opponent: m.opponentName,
         result: m.result,
+        resultReason: m.resultReason,
         deck: m.deckName,
         wentFirst: m.wentFirst,
+        rawLog: m.rawLog,
       })),
     });
 

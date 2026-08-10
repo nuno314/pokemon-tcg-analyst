@@ -79,7 +79,7 @@ export function PlayerStyleCard({
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {ready
-              ? `Dựa trên ${matchCount} trận (tối thiểu ${PLAYER_ASSESSMENT_MIN_MATCHES}). Chạy local, không dùng OpenAI.`
+              ? `Dựa trên ${matchCount} trận (tối thiểu ${PLAYER_ASSESSMENT_MIN_MATCHES}).`
               : dict.dashboard.playerStyleNeed(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)}
           </p>
         </div>

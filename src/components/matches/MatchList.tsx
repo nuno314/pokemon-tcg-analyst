@@ -12,7 +12,13 @@ export type MatchListItem = {
   deckName: string | null;
 };
 
-export function MatchList({ matches }: { matches: MatchListItem[] }) {
+export function MatchList({
+  matches,
+  compact = false,
+}: {
+  matches: MatchListItem[];
+  compact?: boolean;
+}) {
   const dict = t();
   if (matches.length === 0) {
     return (
@@ -27,7 +33,9 @@ export function MatchList({ matches }: { matches: MatchListItem[] }) {
   }
 
   return (
-    <ul className="divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+    <ul
+      className={`divide-y divide-[var(--line)] overflow-hidden overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] ${compact ? "max-h-[calc(100vh-12rem)]" : ""}`}
+    >
       {matches.map((m) => (
         <li key={m.id}>
           <Link

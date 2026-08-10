@@ -326,6 +326,23 @@ export async function listMatches(userId: string, range: RangeFilter = "all") {
     .orderBy(desc(matches.importedAt));
 }
 
+export async function listRecentMatchesWithLogs(userId: string, limit = 10) {
+  return db
+    .select({
+      opponentName: matches.opponentName,
+      result: matches.result,
+      resultReason: matches.resultReason,
+      wentFirst: matches.wentFirst,
+      rawLog: matches.rawLog,
+      deckName: decks.name,
+    })
+    .from(matches)
+    .leftJoin(decks, eq(matches.deckId, decks.id))
+    .where(eq(matches.userId, userId))
+    .orderBy(desc(matches.importedAt))
+    .limit(limit);
+}
+
 export async function getMatchDetail(userId: string, matchId: string) {
   const matchRows = await db
     .select({
@@ -444,6 +461,14 @@ export async function countUserMatches(userId: string) {
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(matches)
     .where(eq(matches.userId, userId));
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function countUserAnalyses(userId: string) {
+  const rows = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(matchAnalyses)
+    .where(eq(matchAnalyses.userId, userId));
   return Number(rows[0]?.count ?? 0);
 }
 

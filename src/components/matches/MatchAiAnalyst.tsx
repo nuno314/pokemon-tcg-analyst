@@ -96,8 +96,7 @@ export function MatchAiAnalyst({
         </div>
       ) : (
         <p className="text-sm text-[var(--muted)]">
-          Bấm AI Analyst để nhận xét điểm tốt, lỗi hay gặp, hướng xử lý và lưu ý đối thủ (chạy
-          local, không cần OpenAI).
+          Bấm AI Analyst để nhận xét điểm tốt, lỗi hay gặp, hướng xử lý và lưu ý đối thủ.
         </p>
       )}
     </section>

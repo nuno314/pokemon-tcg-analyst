@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
 import { ExportBattleLogButton } from "@/components/matches/ExportBattleLogButton";
 import { MatchAiAnalyst } from "@/components/matches/MatchAiAnalyst";
+import { MatchReplayPlayer } from "@/components/matches/MatchReplayPlayer";
 import { MatchTimelineFull } from "@/components/matches/MatchTimeline";
 import { getMatchAnalysis, getMatchDetail } from "@/lib/db/queries";
 import { formatEndReason } from "@/lib/parser/result-labels";
@@ -73,6 +74,8 @@ export default async function MatchDetailPage({
             </span>
           </div>
         </div>
+
+        <MatchReplayPlayer rawLog={match.rawLog} ptcglName={profile.ptcglName} />
 
         <MatchAiAnalyst
           matchId={id}

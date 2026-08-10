@@ -1,4 +1,4 @@
-import { analyzeMatchLocal, assessPlayerLocal } from "./local-heuristics";
+import { analyzeMatchLocal, assessPlayerLocal, type RecentMatchWithLog } from "./local-heuristics";
 
 export type MatchAnalysisResult = {
   summary: string;
@@ -41,7 +41,7 @@ export async function assessPlayerWithAi(input: {
   firstWinRate: number;
   secondWinRate: number;
   deckStats: { name: string; wins: number; losses: number }[];
-  recent: { opponent: string; result: string; deck: string | null; wentFirst: string | null }[];
+  recent: RecentMatchWithLog[];
 }): Promise<PlayerAssessmentResult> {
   return assessPlayerLocal(input);
 }

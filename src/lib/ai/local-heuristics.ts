@@ -1,5 +1,18 @@
-import { parseBattleLog } from "@/lib/parser/ptcgl-log";
+import { parseBattleLog, type ParsedBattleLog } from "@/lib/parser/ptcgl-log";
+import {
+  analyzeMatchSignals,
+  applyCoachingToMatch,
+  applyCoachingToPlayer,
+  COACHING,
+} from "./coaching-knowledge";
+import {
+  aggregateMetaExposure,
+  detectMetaDeck,
+  metaMatchupNotes,
+} from "./meta-decks";
 import type { MatchAnalysisResult, PlayerAssessmentResult } from "./analyze";
+
+const LOG_SLICE = 8000;
 
 type MatchInput = {
   ptcglName: string;
@@ -11,6 +24,15 @@ type MatchInput = {
   rawLog: string;
 };
 
+export type RecentMatchWithLog = {
+  opponent: string;
+  result: "win" | "loss";
+  resultReason: string | null;
+  wentFirst: string | null;
+  deck: string | null;
+  rawLog: string;
+};
+
 type PlayerInput = {
   ptcglName: string;
   matchCount: number;
@@ -19,7 +41,7 @@ type PlayerInput = {
   firstWinRate: number;
   secondWinRate: number;
   deckStats: { name: string; wins: number; losses: number }[];
-  recent: { opponent: string; result: string; deck: string | null; wentFirst: string | null }[];
+  recent: RecentMatchWithLog[];
 };
 
 function countMatches(log: string, re: RegExp) {
@@ -36,7 +58,6 @@ function uniqueCardsPlayedBy(log: string, player: string): string[] {
     const name = m[1]?.replace(/\s+to the Bench.*/i, "").trim();
     if (name && name.length < 60) names.add(name);
   }
-  // Attacks / abilities: "Player's Card used Ability"
   const used = new RegExp(`${escapeRegExp(player)}'s (.+?) used `, "gi");
   for (const m of log.matchAll(used)) {
     const name = m[1]?.trim();
@@ -49,7 +70,14 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function guessArchetype(cards: string[]): string {
+function isMe(wentFirst: string | null, ptcglName: string) {
+  if (!wentFirst) return null;
+  return wentFirst.toLowerCase() === ptcglName.toLowerCase();
+}
+
+function guessArchetype(cards: string[], logSnippet = ""): string {
+  const meta = detectMetaDeck(cards, logSnippet);
+  if (meta) return `${meta.name} (meta ~${meta.share})`;
   const blob = cards.join(" ").toLowerCase();
   if (/charizard|pidgeot|rare candy/.test(blob)) return "Charizard / Stage engine";
   if (/dragapult|drakloak|dreepy|dusknoir/.test(blob)) return "Dragapult line";
@@ -65,25 +93,191 @@ function guessArchetype(cards: string[]): string {
   return "Archetype chưa rõ (log ít tên bài)";
 }
 
+
+function extractKeyMoments(
+  parsed: ParsedBattleLog | null,
+  me: string,
+  opp: string,
+  log: string,
+): string[] {
+  const moments: string[] = [];
+  if (!parsed) return moments;
+
+  for (const turn of parsed.turns) {
+    const isMyTurn = turn.player.toLowerCase() === me.toLowerCase();
+    for (const ev of turn.events) {
+      const t = ev.text;
+      if (isMyTurn && ev.type === "attach") {
+        moments.push(`Turn ${turn.turnNumber}: ${t.replace(/\.$/, "")}.`);
+      }
+      if (isMyTurn && /Boss's Orders/i.test(t)) {
+        moments.push(`Turn ${turn.turnNumber}: bạn chơi Boss's Orders — chọn target chủ động.`);
+      }
+      if (isMyTurn && ev.type === "attack") {
+        const atk = t.match(/used (.+?) on/i);
+        if (atk) moments.push(`Turn ${turn.turnNumber}: ${turn.player} dùng ${atk[1]}.`);
+      }
+      if (ev.type === "knock_out" && new RegExp(`${escapeRegExp(me)} took`, "i").test(log)) {
+        if (t.includes(`${me} took`) || log.includes(`${me} took a Prize`)) {
+          moments.push(`Turn ${turn.turnNumber}: KO quan trọng — bạn lấy prize.`);
+        }
+      }
+      if (new RegExp(`${escapeRegExp(me)}'s .+ was Knocked Out`, "i").test(t)) {
+        moments.push(`Turn ${turn.turnNumber}: Pokémon Active/Bench của bạn bị KO.`);
+      }
+      if (!isMyTurn && /Boss's Orders/i.test(t)) {
+        moments.push(`Turn ${turn.turnNumber}: ${opp} chơi Boss's Orders — ép switch.`);
+      }
+    }
+  }
+
+  if (/Opponent conceded/i.test(log)) {
+    moments.push(`Kết thúc: ${opp} concede sau áp lực prize/setup.`);
+  } else if (parsed.winner?.toLowerCase() === me.toLowerCase()) {
+    moments.push(`Kết thúc: bạn thắng bằng KO/prize chuẩn.`);
+  }
+
+  return unique(moments).slice(0, 6);
+}
+
+function matchMetrics(rawLog: string, ptcglName: string) {
+  const log = rawLog.slice(0, LOG_SLICE);
+  let turnCount = 0;
+  let parsed: ParsedBattleLog | null = null;
+  try {
+    parsed = parseBattleLog(log);
+    turnCount = parsed.turns.length;
+  } catch {
+    turnCount = countMatches(log, /'s Turn$/gm);
+  }
+  const boss = countMatches(log, new RegExp(`${escapeRegExp(ptcglName)} played Boss's Orders`, "gi"));
+  return { log, parsed, turnCount, boss };
+}
+
+export function aggregatePlayerPatterns(
+  ptcglName: string,
+  recent: RecentMatchWithLog[],
+): string[] {
+  const patterns: string[] = [];
+  if (recent.length === 0) return patterns;
+
+  const oppRecord = new Map<string, { w: number; l: number }>();
+  let winConcede = 0;
+  let winStandard = 0;
+  let lossConcede = 0;
+  let lossStandard = 0;
+  let bossInWins = 0;
+  let bossInLosses = 0;
+  let winBossN = 0;
+  let lossBossN = 0;
+  let shortLosses = 0;
+  const deckFirst = new Map<string, { w: number; l: number }>();
+  const deckSecond = new Map<string, { w: number; l: number }>();
+
+  for (const m of recent) {
+    const rec = oppRecord.get(m.opponent) ?? { w: 0, l: 0 };
+    if (m.result === "win") rec.w += 1;
+    else rec.l += 1;
+    oppRecord.set(m.opponent, rec);
+
+    if (m.result === "win") {
+      if (m.resultReason === "concede") winConcede += 1;
+      else winStandard += 1;
+    } else {
+      if (m.resultReason === "concede") lossConcede += 1;
+      else lossStandard += 1;
+    }
+
+    const { turnCount, boss } = matchMetrics(m.rawLog, ptcglName);
+    if (m.result === "win") {
+      bossInWins += boss;
+      winBossN += 1;
+    } else {
+      bossInLosses += boss;
+      lossBossN += 1;
+      if (turnCount > 0 && turnCount < 8) shortLosses += 1;
+    }
+
+    if (m.deck) {
+      const first = isMe(m.wentFirst, ptcglName);
+      const map = first ? deckFirst : first === false ? deckSecond : null;
+      if (map) {
+        const d = map.get(m.deck) ?? { w: 0, l: 0 };
+        if (m.result === "win") d.w += 1;
+        else d.l += 1;
+        map.set(m.deck, d);
+      }
+    }
+  }
+
+  for (const [opp, { w, l }] of [...oppRecord.entries()].sort((a, b) => b[1].w + b[1].l - (a[1].w + a[1].l))) {
+    if (w + l >= 2) {
+      patterns.push(`Gặp ${opp} ${w + l} lần: ${w}W-${l}L.`);
+      if (patterns.length >= 2) break;
+    }
+  }
+
+  const winTotal = winConcede + winStandard;
+  if (winTotal >= 2) {
+    const parts: string[] = [];
+    if (winStandard) parts.push(`${winStandard} trận thắng KO/prize`);
+    if (winConcede) parts.push(`${winConcede} trận thắng nhờ concede`);
+    patterns.push(`Cách thắng gần đây: ${parts.join(", ")}.`);
+  }
+
+  if (lossStandard + lossConcede >= 2 && shortLosses >= 2) {
+    patterns.push(
+      `${shortLosses} trận thua kết thúc trước turn 8 — thường setup chậm hoặc thiếu Boss sớm.`,
+    );
+  }
+
+  if (winBossN && lossBossN) {
+    const avgWin = Math.round((bossInWins / winBossN) * 10) / 10;
+    const avgLoss = Math.round((bossInLosses / lossBossN) * 10) / 10;
+    if (avgWin > avgLoss + 0.5) {
+      patterns.push(
+        `Trận thắng dùng Boss's Orders nhiều hơn trận thua (≈${avgWin} vs ≈${avgLoss} lần/trận).`,
+      );
+    } else if (avgLoss < 0.5 && lossBossN >= 2) {
+      patterns.push(`Nhiều trận thua hầu như không chơi Boss — dễ bị kẹt Active.`);
+    }
+  }
+
+  for (const [deck, { w, l }] of deckFirst) {
+    if (w + l >= 2 && w / (w + l) >= 0.65) {
+      patterns.push(`Deck "${deck}" mạnh khi đi trước (${w}W-${l}L trong sample gần đây).`);
+      break;
+    }
+  }
+  for (const [deck, { w, l }] of deckSecond) {
+    if (w + l >= 2 && w / (w + l) >= 0.65) {
+      patterns.push(`Deck "${deck}" mạnh khi đi sau (${w}W-${l}L trong sample gần đây).`);
+      break;
+    }
+  }
+
+  const form = recent
+    .slice(0, 5)
+    .map((m) => (m.result === "win" ? "W" : "L"))
+    .join(" ");
+  if (recent.length >= 3) {
+    patterns.push(`Form 5 trận gần nhất: ${form}.`);
+  }
+
+  return unique(patterns).slice(0, 6);
+}
+
 export function analyzeMatchLocal(input: MatchInput): MatchAnalysisResult {
   const me = input.ptcglName;
   const opp = input.opponentName;
-  const log = input.rawLog;
-  const parsed = (() => {
-    try {
-      return parseBattleLog(log);
-    } catch {
-      return null;
-    }
-  })();
+  const { log, parsed } = matchMetrics(input.rawLog, me);
+  const turnCount = parsed?.turns.length ?? input.turnCount;
 
   const myBoss = countMatches(log, new RegExp(`${escapeRegExp(me)} played Boss's Orders`, "gi"));
   const oppBoss = countMatches(log, new RegExp(`${escapeRegExp(opp)} played Boss's Orders`, "gi"));
   const myPrizes = countMatches(log, new RegExp(`${escapeRegExp(me)} took (a|\\d+) Prize`, "gi"));
-  const oppPrizes = countMatches(log, new RegExp(`${escapeRegExp(opp)} took (a|\\d+) Prize`, "gi"));
   const myRetreats = countMatches(log, new RegExp(`${escapeRegExp(me)} retreated `, "gi"));
   const myEnergyAttach = countMatches(log, new RegExp(`${escapeRegExp(me)} attached .+ Energy`, "gi"));
-  const myKos = countMatches(log, new RegExp(`was Knocked Out![\\s\\S]{0,120}${escapeRegExp(me)} took`, "gi"));
   const conceded = /Opponent conceded/i.test(log);
   const wentFirstMe =
     input.wentFirst?.toLowerCase() === me.toLowerCase() ||
@@ -91,103 +285,122 @@ export function analyzeMatchLocal(input: MatchInput): MatchAnalysisResult {
 
   const myCards = uniqueCardsPlayedBy(log, me);
   const oppCards = uniqueCardsPlayedBy(log, opp);
-  const myArch = guessArchetype(myCards);
-  const oppArch = guessArchetype(oppCards);
+  const myArch = guessArchetype(myCards, log);
+  const oppArch = guessArchetype(oppCards, log);
+  const oppMeta = detectMetaDeck(oppCards, log);
+  const moments = extractKeyMoments(parsed, me, opp, log);
 
   const goodPlays: string[] = [];
   const mistakes: string[] = [];
   const tips: string[] = [];
   const opponentNotes: string[] = [];
 
-  if (input.result === "win") {
-    goodPlays.push(
-      conceded
-        ? "Đối thủ concede — bạn đã tạo đủ áp lực hoặc prize race nghiêng rõ."
-        : `Bạn chốt được trận (${myPrizes} lần lấy prize được ghi nhận trong log).`,
-    );
-  } else {
-    mistakes.push(
-      `Thua trước ${opp}. Prize đối thủ được ghi nhận khoảng ${oppPrizes} lần lấy prize trong log.`,
-    );
+  for (const m of moments.filter((x) => /Turn|Kết thúc/.test(x))) {
+    if (input.result === "win" && (/KO quan trọng|Boss's Orders|dùng .* on|concede/.test(m))) {
+      goodPlays.push(m);
+    } else if (input.result === "loss" && /bị KO|Boss's Orders — ép/.test(m)) {
+      mistakes.push(m);
+    } else if (input.result === "win") {
+      goodPlays.push(m);
+    }
   }
 
-  if (myBoss > 0) {
-    goodPlays.push(`Dùng Boss's Orders ${myBoss} lần — có chủ đích sniper Active.`);
-  } else if (input.turnCount >= 6) {
-    mistakes.push("Hầu như không thấy Boss's Orders — dễ bị kẹt Active xấu / chậm prize.");
-    tips.push("Giữ ít nhất 1–2 Boss cho cửa sổ KO 2 prize hoặc phá setup đối thủ.");
+  if (input.result === "win") {
+    if (conceded) {
+      goodPlays.push(`${opp} concede — áp lực prize/setup khiến đối thủ không gỡ được.`);
+    } else if (myPrizes >= 2) {
+      goodPlays.push(`Chốt trận qua chuỗi lấy prize (${myPrizes} lần ghi nhận trong log).`);
+    }
+  } else {
+    mistakes.push(`Thua trước ${opp}${conceded ? " sau khi board nghiêng" : " — đối thủ chốt prize trước"}.`);
+  }
+
+  if (myBoss === 0 && turnCount >= 6) {
+    mistakes.push("Không thấy Boss's Orders suốt trận — khó chọn KO hoặc phá bench đối thủ.");
+    tips.push("Giữ Boss cho turn mà Active đối thủ là mục tiêu 2 prize hoặc không retreat được.");
+  } else if (myBoss > 0) {
+    const bossMoment = moments.find((m) => /Boss's Orders/.test(m));
+    if (bossMoment) goodPlays.push(bossMoment);
   }
 
   if (oppBoss > myBoss + 1) {
     opponentNotes.push(
-      `${opp} dùng Boss nhiều hơn bạn (${oppBoss} vs ${myBoss}) — họ chủ động chọn target; chuẩn bị tank/switch.`,
+      `${opp} chủ động Boss hơn bạn (${oppBoss} vs ${myBoss}) — họ ép switch/KO dễ hơn.`,
     );
   }
 
-  if (wentFirstMe && input.result === "win") {
-    goodPlays.push("Đi trước và thắng — nhịp setup/tấn công đầu game ổn.");
-  } else if (wentFirstMe && input.result === "loss") {
-    mistakes.push("Đi trước nhưng vẫn thua — thường do setup chậm hoặc bị punish turn 2–3.");
-    tips.push("Review lại turn 1–2: bench cơ bản, energy, và công cụ search có ra đúng nhịp không.");
+  if (wentFirstMe && input.result === "loss") {
+    mistakes.push("Đi trước nhưng thua — thường do turn 1–2 chưa có bench/energy hoặc bị punish sớm.");
+    tips.push("Ôn lại opening: mulligan hand, bench basic, và attach turn 1–2.");
   } else if (!wentFirstMe && input.result === "win") {
-    goodPlays.push("Đi sau vẫn thắng — khả năng stabilize / comeback prize race tốt.");
+    goodPlays.push("Đi sau vẫn thắng — comeback hoặc stabilize giữa trận tốt.");
   }
 
-  if (myEnergyAttach === 0 && input.turnCount >= 4) {
-    mistakes.push("Log gần như không thấy attach energy của bạn — có thể stuck energy hoặc bị disruption.");
-    tips.push("Kiểm tra đường lấy energy (Basic/Special) và số lần attach mỗi turn.");
-  } else if (myEnergyAttach >= input.turnCount) {
-    goodPlays.push("Nhịp attach energy khá đều so với số turn.");
+  if (myEnergyAttach === 0 && turnCount >= 4) {
+    mistakes.push("Log gần như không attach energy — có thể bị lock energy hoặc brick hand.");
   }
 
   if (myRetreats >= 3) {
-    tips.push(
-      `Retreat khá nhiều (${myRetreats}) — cân nhắc Air Balloon / Switch / free retreat để đỡ mất tempo.`,
-    );
+    tips.push(`Retreat ${myRetreats} lần — thêm Switch / Air Balloon nếu deck hay đổi Active.`);
   }
 
-  if (input.turnCount <= 5 && input.result === "win") {
-    goodPlays.push("Trận kết thúc nhanh — áp lực sớm hoặc đối thủ gãy setup.");
-  } else if (input.turnCount >= 14) {
-    opponentNotes.push("Trận kéo dài — đối thủ có thể grind/control; ưu tiên consistency và resource.");
-    tips.push("Trong mirror/grind: đếm prize còn lại và tránh over-extend Boss sớm.");
+  if (turnCount <= 5 && input.result === "win") {
+    goodPlays.push("Trận ngắn — áp lực sớm hoặc đối thủ gãy ngay turn đầu.");
+  } else if (turnCount >= 14) {
+    tips.push("Trận dài — đếm prize còn lại trước khi over-commit Boss.");
   }
 
-  if (myKos > 0) {
-    goodPlays.push(`Có chuỗi KO dẫn tới lấy prize (ước lượng ${myKos} cụm KO liên quan bạn).`);
+  opponentNotes.push(`Đối thủ (${oppArch}): ${oppCards.slice(0, 5).join(", ") || "log ít tên bài"}.`);
+  if (oppCards.length === 0) {
+    opponentNotes.push("Bật hiện card ID trong export để lần sau analyst đọc bài rõ hơn.");
   }
 
-  opponentNotes.push(`Ước lượng archetype đối thủ: ${oppArch}.`);
-  if (oppCards.length) {
-    opponentNotes.push(`Bài nổi bật phía ${opp}: ${oppCards.slice(0, 6).join(", ")}.`);
-  } else {
-    opponentNotes.push("Log ít lộ bài đối thủ — lần sau tắt Hide card IDs nếu muốn analyst chi tiết hơn.");
+  if (oppMeta) {
+    const meta = metaMatchupNotes(oppMeta, {
+      wentFirstMe: wentFirstMe ?? false,
+      result: input.result,
+      log,
+    });
+    opponentNotes.push(...meta.opponentNotes);
+    tips.push(...meta.tips);
+    if (input.result === "loss") mistakes.push(...meta.mistakes);
+    else goodPlays.push(`[vs ${oppMeta.name}] Bạn thắng matchup meta — giữ plan tương tự lần sau.`);
   }
 
   tips.push(
     input.deckName
-      ? `Với deck "${input.deckName}" (${myArch}): ưu tiên rehearsal matchup vs ${oppArch}.`
-      : `Gắn deck khi import để lần sau so matchup theo list cụ thể (hiện thấy line: ${myArch}).`,
+      ? `Với deck "${input.deckName}" vs ${oppArch}: luyện matchup Boss timing và prize trade.`
+      : `Gắn deck khi import — hiện thấy line ${myArch}.`,
   );
 
   if (goodPlays.length === 0) {
-    goodPlays.push("Chưa bắt được điểm nổi bật rõ — xem lại timeline turn đầu và cửa sổ Boss.");
+    goodPlays.push("Xem timeline từng turn để tìm điểm then chốt (attach, Boss, KO).");
   }
 
+  const signals = analyzeMatchSignals(log, parsed, me, opp, wentFirstMe ?? false, turnCount);
+  applyCoachingToMatch(signals, input.result, tips, mistakes);
+
+  const deckPart = input.deckName ? ` với deck "${input.deckName}"` : "";
+  const endPart = conceded
+    ? `${opp} concede.`
+    : input.result === "win"
+      ? "chốt bằng KO/prize."
+      : `${opp} chốt trước.`;
   const summary = [
-    `Trận vs ${opp}: bạn ${input.result === "win" ? "thắng" : "thua"}`,
-    wentFirstMe ? "đi trước" : input.wentFirst ? "đi sau" : "không rõ ai đi trước",
-    `sau khoảng ${input.turnCount} turn.`,
-    `Phân tích local (không dùng OpenAI) dựa trên Boss ${myBoss}/${oppBoss}, prize events ${myPrizes}/${oppPrizes}, energy attach ~${myEnergyAttach}.`,
-    `Bạn: ${myArch}. Đối thủ: ${oppArch}.`,
-  ].join(" ");
+    `Trận vs ${opp}${deckPart}: bạn ${input.result === "win" ? "thắng" : "thua"}`,
+    wentFirstMe ? "đi trước" : input.wentFirst ? "đi sau" : "",
+    `sau ${turnCount} turn, ${endPart}`,
+    `Line bạn: ${myArch}. Đối thủ: ${oppArch}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return {
     summary,
-    goodPlays: unique(goodPlays),
-    mistakes: unique(mistakes),
-    tips: unique(tips),
-    opponentNotes: unique(opponentNotes),
+    goodPlays: unique(goodPlays).slice(0, 6),
+    mistakes: unique(mistakes).slice(0, 5),
+    tips: unique(tips).slice(0, 6),
+    opponentNotes: unique(opponentNotes).slice(0, 6),
   };
 }
 
@@ -196,6 +409,7 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
   const wr = input.wins / total;
   const first = input.firstWinRate;
   const second = input.secondWinRate;
+  const patterns = aggregatePlayerPatterns(input.ptcglName, input.recent);
 
   let archetype = "All-rounder";
   if (wr >= 0.6 && first >= second + 0.1) archetype = "First-turn aggressor";
@@ -215,55 +429,109 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
 
   const recentWins = input.recent.filter((r) => r.result === "win").length;
   const form = input.recent.length
-    ? `${recentWins}/${input.recent.length} thắng ở các trận gần đây`
-    : "chưa đủ lịch sử gần đây";
+    ? `${recentWins}/${input.recent.length} thắng trong ${input.recent.length} trận phân tích`
+    : "chưa đủ sample";
 
   const strengths: string[] = [];
   const weaknesses: string[] = [];
   const focus: string[] = [];
 
-  if (wr >= 0.55) strengths.push(`Win rate tổng ổn (~${Math.round(wr * 100)}%).`);
-  else weaknesses.push(`Win rate tổng còn thấp (~${Math.round(wr * 100)}%).`);
+  for (const p of patterns) {
+    if (/mạnh khi|Cách thắng|Boss's Orders nhiều hơn trận thắng|Form.*W.*W/.test(p)) {
+      strengths.push(p);
+    } else if (/thua kết thúc|không chơi Boss|Gặp.*\dW-\dL.*0W|yếu/i.test(p)) {
+      weaknesses.push(p);
+    } else {
+      strengths.push(p);
+    }
+  }
 
-  if (first >= 0.55) strengths.push(`Mạnh khi đi trước (~${Math.round(first * 100)}%).`);
-  else if (first > 0) weaknesses.push(`Đi trước chưa hiệu quả (~${Math.round(first * 100)}%).`);
+  if (wr >= 0.55 && strengths.length < 3) {
+    strengths.push(`Win rate tổng ${Math.round(wr * 100)}% (${input.wins}W-${input.losses}L).`);
+  } else if (wr < 0.45) {
+    weaknesses.push(`Win rate tổng ${Math.round(wr * 100)}% — cần ổn định opening và prize trade.`);
+  }
 
-  if (second >= 0.55) strengths.push(`Mạnh khi đi sau (~${Math.round(second * 100)}%).`);
-  else if (second > 0) weaknesses.push(`Đi sau còn yếu (~${Math.round(second * 100)}%).`);
+  if (first >= 0.55 && !strengths.some((s) => /đi trước/i.test(s))) {
+    strengths.push(`Đi trước hiệu quả (~${Math.round(first * 100)}% win rate).`);
+  } else if (first < 0.4 && first > 0) {
+    weaknesses.push(`Đi trước yếu (~${Math.round(first * 100)}%) — review turn 1–2 và bench.`);
+  }
 
-  if (bestDeck && bestDeck.wins + bestDeck.losses > 0) {
-    strengths.push(
-      `Deck tốt nhất hiện tại: ${bestDeck.name} (${bestDeck.wins}W-${bestDeck.losses}L).`,
-    );
+  if (second >= 0.55 && !strengths.some((s) => /đi sau/i.test(s))) {
+    strengths.push(`Đi sau ổn (~${Math.round(second * 100)}% win rate).`);
+  } else if (second < 0.4 && second > 0) {
+    weaknesses.push(`Đi sau yếu (~${Math.round(second * 100)}%) — luyện stabilize và comeback.`);
+  }
+
+  if (bestDeck && bestDeck.wins + bestDeck.losses >= 2) {
+    const rate = Math.round((bestDeck.wins / (bestDeck.wins + bestDeck.losses)) * 100);
+    strengths.push(`Deck "${bestDeck.name}" đang carry (${bestDeck.wins}W-${bestDeck.losses}L, ~${rate}%).`);
   }
   if (worstDeck) {
-    weaknesses.push(
-      `Deck cần review: ${worstDeck.name} (${worstDeck.wins}W-${worstDeck.losses}L).`,
-    );
-    focus.push(`Spile thêm 5–10 ván ${worstDeck.name} và note vì sao thua (prize / setup / Boss).`);
+    weaknesses.push(`Deck "${worstDeck.name}" cần review (${worstDeck.wins}W-${worstDeck.losses}L).`);
+    focus.push(`Chơi thêm 5 ván "${worstDeck.name}" và ghi lại vì sao thua (setup / Boss / prize).`);
   }
 
   if (Math.abs(first - second) >= 0.2) {
     focus.push(
       first > second
-        ? "Luyện bài đi sau: stabilize turn 1–2, tránh bị KO sớm."
-        : "Luyện bài đi trước: ép prize sớm, đừng over-setup.",
+        ? "Tập trung luyện đi sau: giữ bench, tránh bị KO sớm turn 2–3."
+        : "Tập trung luyện đi trước: ép prize trước turn 6, đừng over-setup.",
     );
   }
 
-  focus.push("Sau mỗi trận dùng AI Analyst local để ghi 1 lỗi + 1 fix cụ thể.");
-  if (focus.length > 3) focus.length = 3;
-  if (strengths.length === 0) strengths.push("Đã có sample trận để theo dõi — tiếp tục import đều.");
-  if (weaknesses.length === 0) weaknesses.push("Chưa thấy điểm yếu thống kê rõ — cần thêm đa dạng đối thủ.");
+  if (weaknesses.some((w) => /Boss/i.test(w))) {
+    focus.push("Mỗi trận thua: mở log xem turn nào cần Boss mà chưa có.");
+  }
 
-  const summary = `${input.ptcglName} sau ${input.matchCount} trận có phong cách gần với “${archetype}”. Win rate ${Math.round(wr * 100)}% (${input.wins}W-${input.losses}L), form gần đây: ${form}. Đánh giá này chạy local từ thống kê, không gọi OpenAI.`;
+  applyCoachingToPlayer(
+    focus,
+    input.ptcglName,
+    input.recent.map((r) => ({
+      opponent: r.opponent,
+      result: r.result,
+      rawLog: r.rawLog,
+      wentFirst: r.wentFirst,
+    })),
+  );
+
+  const metaExposure = aggregateMetaExposure(
+    input.recent.map((r) => ({ opponent: r.opponent, result: r.result, rawLog: r.rawLog })),
+  );
+  for (const { deck, wins, losses } of metaExposure.slice(0, 3)) {
+    const total = wins + losses;
+    if (total < 1) continue;
+    const line = `vs ${deck.name} (meta ~${deck.share}): ${wins}W-${losses}L.`;
+    if (losses > wins) {
+      weaknesses.push(line);
+      focus.push(`[${deck.name}] ${deck.counters[0]}`);
+      if (deck.engine) {
+        const snippet = deck.engine.length > 120 ? `${deck.engine.slice(0, 120)}…` : deck.engine;
+        focus.push(snippet);
+      }
+    } else {
+      strengths.push(line);
+    }
+  }
+
+  if (focus.length === 0) {
+    focus.push("Import đều và đa dạng matchup để pattern rõ hơn.");
+  }
+  if (focus.length > 5) focus.length = 5;
+  if (strengths.length === 0) strengths.push("Đã có sample — tiếp tục import để review sắc hơn.");
+  if (weaknesses.length === 0) weaknesses.push("Chưa thấy lỗi lặp rõ — thêm trận vs meta khác nhau.");
+
+  const summary = `${input.ptcglName} sau ${input.matchCount} trận: phong cách “${archetype}”. ${form}. ${
+    patterns[0] ?? `Win rate ${Math.round(wr * 100)}%.`
+  } Nên tập trung: ${COACHING.prize_checking.title.toLowerCase()}, ${COACHING.prize_mapping.title.toLowerCase()}, ${COACHING.sequencing.title.toLowerCase()}.`;
 
   return {
     archetype,
     summary,
-    strengths: unique(strengths),
-    weaknesses: unique(weaknesses),
-    focus: unique(focus),
+    strengths: unique(strengths).slice(0, 6),
+    weaknesses: unique(weaknesses).slice(0, 5),
+    focus: unique(focus).slice(0, 5),
   };
 }
 

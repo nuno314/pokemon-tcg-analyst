@@ -319,6 +319,7 @@ export async function listMatches(userId: string, range: RangeFilter = "all") {
       importedAt: matches.importedAt,
       deckId: matches.deckId,
       deckName: decks.name,
+      rawLog: matches.rawLog,
     })
     .from(matches)
     .leftJoin(decks, eq(matches.deckId, decks.id))

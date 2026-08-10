@@ -14,6 +14,7 @@ import {
   repairUserMatches,
   type RangeFilter,
 } from "@/lib/db/queries";
+import { enrichMatchListItems } from "@/lib/matches/enrich-list";
 import { generateQuestBoard } from "@/lib/quests/generate";
 import { t } from "@/lib/i18n/vi";
 import { requireProfile } from "@/lib/session";
@@ -49,11 +50,7 @@ export default async function DashboardPage({
     analysisCount,
     deckCount: decks.length,
   });
-
-  const matchListItems = matches.map((m) => ({
-    ...m,
-    deckName: m.deckName ?? (m.deckId ? deckName.get(m.deckId) ?? null : null),
-  }));
+  const matchListItems = enrichMatchListItems(matches, deckName);
 
   return (
     <div>

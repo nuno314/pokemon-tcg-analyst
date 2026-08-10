@@ -48,6 +48,8 @@ export const vi = {
     createDeckHint: "Tạo deck để theo dõi win rate theo list.",
     recentMatches: "Trận gần đây",
     importLog: "Import log",
+    opponentDeckUnknown: "Deck đối thủ chưa rõ",
+    yourDeckUnset: "Chưa gắn deck",
     playerStyle: "Phong cách chơi (AI)",
     playerStyleNeed: (n: number, need: number) =>
       `Cần ít nhất ${need} trận để đánh giá. Hiện có ${n}/${need}.`,

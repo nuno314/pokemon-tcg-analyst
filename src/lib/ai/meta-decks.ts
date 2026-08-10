@@ -29,6 +29,7 @@ export type MetaDeckGuide = {
   engine: string;
   plan: string;
   keyCards: string[];
+  iconIds: number[];
   logSignals: MetaLogSignal[];
   counters: string[];
   watch: string[];
@@ -46,6 +47,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Phantom Dive spread 60 damage lên bench; Drakloak draw engine; Munkidori/Dusknoir manipulate damage để pick off Mega ex setup trước multi-prize turn.",
     plan: "Bench snipe + spread — xé Mega ex và setup trước khi finish.",
     keyCards: ["Dragapult ex", "Drakloak", "Dusknoir", "Munkidori", "Dreepy"],
+    iconIds: [887, 477],
     logSignals: [
       {
         pattern: /phantom dive|60 damage counters/i,
@@ -73,6 +75,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Trade discard→draw 2; acceleration cụ thể; Night Joker copy attack nặng từ bench N's Pokémon — toolbox disruptive.",
     plan: "Draw engine + copy attack — pressure liên tục, linh hoạt theo bench.",
     keyCards: ["N's Zoroark ex", "N's Zorua", "Night Joker"],
+    iconIds: [571],
     logSignals: [
       { pattern: /night joker|copied.*attack/i, tip: "Night Joker copy attack — xem bench N's Pokémon nào bị copy; Boss target đó hoặc Zoroark ex." },
       { pattern: /trade/i, tip: "Trade engine chạy — Iono sau khi họ discard/draw nhiều." },
@@ -95,6 +98,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Mysterious Rock Inn: Crustle **không nhận damage từ attack của Pokémon ex** — stall/damage denial.",
     plan: "Tank non-ex immune + lock game — win dài hoặc out-resource.",
     keyCards: ["Crustle", "Dwebble", "Mysterious Rock Inn"],
+    iconIds: [558],
     logSignals: [
       {
         pattern: /mysterious rock inn|didn't take any damage.*ex/i,
@@ -120,6 +124,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Seek Inspiration discard top deck, copy attack non-Rule Box; Ciphermaniac/Academy at Night stack top cho burst (Metagross-style).",
     plan: "Top-deck manipulation + copy huge attack.",
     keyCards: ["Slowking", "Ciphermaniac's Codebreaking", "Academy at Night", "Metagross"],
+    iconIds: [199, 376],
     logSignals: [
       { pattern: /seek inspiration/i, tip: "Seek Inspiration copy — biết top deck họ setup gì; pressure trước copy turn." },
       { pattern: /ciphermaniac|academy at night/i, tip: "Top deck stacked — Boss Slowking hoặc disrupt trước burst turn." },
@@ -142,6 +147,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Meganium double Grass attach; Teal Mask Ogerpon accel; Syrup Storm scale damage + heal board.",
     plan: "Energy snowball → infinite-scaling Syrup Storm OHKO.",
     keyCards: ["Hydrapple ex", "Meganium", "Teal Mask Ogerpon ex", "Dipplin"],
+    iconIds: [1019, 154],
     logSignals: [
       { pattern: /syrup storm/i, tip: "Syrup Storm scaling — KO Hydrapple ex hoặc strip energy trước turn damage lớn." },
       { pattern: /meganium/i, tip: "Meganium double attach online — ưu tiên Boss Meganium hoặc rush trước snowball." },
@@ -163,6 +169,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     engine: "Alakazam draw flood + Dudunsparce; Powerful Hand OHKO Active từ hand lớn.",
     plan: "Draw engine → one-shot Active.",
     keyCards: ["Alakazam", "Dudunsparce", "Powerful Hand"],
+    iconIds: [65],
     logSignals: [
       { pattern: /powerful hand/i, tip: "Powerful Hand OHKO window — Iono trước hoặc switch/tank Active turn này.", onLoss: true },
       { pattern: /dudunsparce/i, tip: "Dudunsparce draw online — hand disruption càng sớm càng tốt." },
@@ -185,6 +192,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Mega Kangaskhan + Teal Ogerpon draw/accel; discard Basic Energy fuel Bellowing Thunder OHKO Mega ex.",
     plan: "Aggressive scaling OHKO high-HP Mega.",
     keyCards: ["Raging Bolt ex", "Mega Kangaskhan ex", "Teal Mask Ogerpon ex"],
+    iconIds: [1021, 115],
     logSignals: [
       { pattern: /bellowing thunder|climactic descent/i, tip: "Bellowing Thunder turn — Boss Bolt thiếu energy hoặc tank nếu chưa fuel đủ.", onLoss: true },
       { pattern: /mega kangaskhan/i, tip: "Mega Kangaskhan draw engine — disrupt hoặc pressure trước Bolt setup." },
@@ -207,6 +215,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Teal Mask Ogerpon draw/accel; Ogre's Mask cycle forms; Crispin multi-type — toolbox control/burst.",
     plan: "Form cycle + tech attackers theo matchup.",
     keyCards: ["Teal Mask Ogerpon ex", "Ogre's Mask", "Crispin"],
+    iconIds: [1017],
     logSignals: [
       { pattern: /ogre's mask|ogres mask/i, tip: "Ogre's Mask form swap — identify form hiện tại để chọn Boss target đúng." },
       { pattern: /crispin/i, tip: "Crispin energy fix — expect multi-type attack next turn." },
@@ -229,6 +238,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Full Moon Rondo scale theo **tổng bench**; hard counter Dragon (Dragapult); Lillie support toolbox.",
     plan: "Low bench on your side = less damage; họ muốn nhiều bench để scale.",
     keyCards: ["Lillie's Clefairy ex", "Full Moon Rondo", "Lillie"],
+    iconIds: [35],
     logSignals: [
       {
         pattern: /full moon rondo/i,
@@ -254,6 +264,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "1-prize anti-meta; Team Rocket supporter scale damage; OHKO Mega ex.",
     plan: "Single-prize aggro — trade 2-for-1 prize vs Mega ex.",
     keyCards: ["Rocket's Honchkrow", "Team Rocket's", "Murkrow"],
+    iconIds: [430],
     logSignals: [
       { pattern: /team rocket|rocket's/i, tip: "Rocket engine scaling — hand disruption; tránh feed easy 2-prize KO line.", onLoss: true },
     ],
@@ -275,6 +286,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Dipplin + Festival Grounds: Festival Lead cho **attack 2 lần**/turn; Thwackey Boom Boom Groove search; Brave Bangle/Gladion boost — burst OHKO Mega.",
     plan: "Double attack turn under Stadium → combined damage xé Mega ex.",
     keyCards: ["Dipplin", "Festival Grounds", "Festival Lead", "Thwackey", "Brave Bangle"],
+    iconIds: [1011, 811],
     logSignals: [
       {
         pattern: /festival grounds|festival lead/i,
@@ -303,6 +315,7 @@ export const META_DECKS: MetaDeckGuide[] = [
       "Solrock 1-prize accel energy → Mega Lucario ex 270+ damage; Premium Power Pro cho OHKO Mega ex.",
     plan: "Early Solrock setup → single-turn Mega Lucario burst.",
     keyCards: ["Mega Lucario ex", "Solrock", "Premium Power Pro", "Lucario"],
+    iconIds: [448, 338],
     logSignals: [
       { pattern: /solrock/i, tip: "Solrock accel online — expect Mega Lucario attack turn 2–3; Boss Solrock sớm." },
       {

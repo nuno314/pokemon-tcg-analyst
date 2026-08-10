@@ -4,6 +4,7 @@ import { AppNav } from "@/components/AppNav";
 import { MatchList } from "@/components/matches/MatchList";
 import { DeleteDeckButton } from "@/components/decks/DeleteDeckButton";
 import { DeckCardGallery, DeckCardRow } from "@/components/decks/CardImages";
+import { enrichMatchListItems } from "@/lib/matches/enrich-list";
 import { getDeckWithCards, listMatches } from "@/lib/db/queries";
 import { requireProfile } from "@/lib/session";
 
@@ -17,7 +18,8 @@ export default async function DeckDetailPage({
   const deck = await getDeckWithCards(session.user.id, id);
   if (!deck) notFound();
 
-  const matches = (await listMatches(session.user.id, "all")).filter((m) => m.deckId === id);
+  const deckMatches = (await listMatches(session.user.id, "all")).filter((m) => m.deckId === id);
+  const matchListItems = enrichMatchListItems(deckMatches, new Map([[id, deck.name]]));
 
   const groups = {
     pokemon: deck.cards.filter((c) => c.category === "pokemon"),
@@ -82,7 +84,7 @@ export default async function DeckDetailPage({
           <h2 className="font-display text-xl text-[var(--ink)]">
             Matches with this deck
           </h2>
-          <MatchList matches={matches} />
+          <MatchList matches={matchListItems} />
         </section>
       </main>
     </div>

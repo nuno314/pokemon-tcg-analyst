@@ -1,28 +1,50 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
+import { FloatingMascots } from "@/components/FloatingMascots";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Fredoka({
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const body = Source_Sans_3({
-  variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
+const body = Nunito({
+  variable: "--font-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "PTCGL Tracker",
-  description: "Import Pokémon TCG Live battle logs, track win rate, and review turn timelines.",
+  description: "Import battle log PTCG Live, theo dõi win rate và phân tích AI.",
 };
+
+const themeBootScript = `
+(() => {
+  try {
+    const stored = localStorage.getItem('ptcgl-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = stored === 'dark' || (!stored && prefersDark);
+    if (dark) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch {}
+})();
+`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="vi" className={`${display.variable} ${body.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
+      <body className="relative min-h-full flex flex-col overflow-x-hidden">
+        <ThemeProvider>
+          <FloatingMascots />
+          <div className="relative z-[1] flex min-h-full flex-1 flex-col">{children}</div>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

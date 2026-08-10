@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
+import { ExportBattleLogButton } from "@/components/matches/ExportBattleLogButton";
+import { MatchAiAnalyst } from "@/components/matches/MatchAiAnalyst";
 import { MatchTimelineFull } from "@/components/matches/MatchTimeline";
-import { getMatchDetail } from "@/lib/db/queries";
+import { getMatchAnalysis, getMatchDetail } from "@/lib/db/queries";
 import { formatEndReason } from "@/lib/parser/result-labels";
+import { t } from "@/lib/i18n/vi";
 import { requireProfile } from "@/lib/session";
 
 export default async function MatchDetailPage({
@@ -15,6 +18,8 @@ export default async function MatchDetailPage({
   const { id } = await params;
   const detail = await getMatchDetail(session.user.id, id);
   if (!detail) notFound();
+  const analysis = await getMatchAnalysis(session.user.id, id);
+  const dict = t();
 
   const { match, turns, events } = detail;
   const setupEvents = events.filter((e) => !e.turnId);
@@ -34,38 +39,55 @@ export default async function MatchDetailPage({
           <div>
             <p className="text-sm text-[var(--muted)]">
               <Link href="/dashboard" className="hover:underline">
-                Dashboard
+                {dict.match.dashboard}
               </Link>{" "}
-              / Match
+              / {dict.match.match}
             </p>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
+            <h1 className="font-display text-3xl text-[var(--ink)]">
               vs {match.opponentName}
             </h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {match.deckName ? (
                 <>
-                  Deck:{" "}
+                  {dict.match.deck}:{" "}
                   <Link href={`/decks/${match.deckId}`} className="text-[var(--accent)] hover:underline">
                     {match.deckName}
                   </Link>
                   {" · "}
                 </>
               ) : null}
-              Went first: {match.wentFirst ?? "—"} · End: {formatEndReason(match.resultReason)}
-              {match.winner ? ` · Winner: ${match.winner}` : ""}
-              {match.importedAt ? ` · ${new Date(match.importedAt).toLocaleString()}` : ""}
+              {dict.match.wentFirst}: {match.wentFirst ?? "—"} · {dict.match.end}:{" "}
+              {formatEndReason(match.resultReason)}
+              {match.winner ? ` · ${dict.match.winner}: ${match.winner}` : ""}
+              {match.importedAt ? ` · ${new Date(match.importedAt).toLocaleString("vi-VN")}` : ""}
             </p>
           </div>
-          <span
-            className={`rounded-md px-3 py-1.5 text-sm font-semibold uppercase ${
-              match.result === "win"
-                ? "bg-emerald-100 text-emerald-800"
-                : "bg-rose-100 text-rose-800"
-            }`}
-          >
-            {match.result}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportBattleLogButton rawLog={match.rawLog} />
+            <span
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold uppercase ${
+                match.result === "win" ? "badge-win" : "badge-loss"
+              }`}
+            >
+              {match.result === "win" ? dict.common.win : dict.common.loss}
+            </span>
+          </div>
         </div>
+
+        <MatchAiAnalyst
+          matchId={id}
+          initial={
+            analysis
+              ? {
+                  summary: analysis.summary,
+                  goodPlays: analysis.goodPlays,
+                  mistakes: analysis.mistakes,
+                  tips: analysis.tips,
+                  opponentNotes: analysis.opponentNotes,
+                }
+              : null
+          }
+        />
 
         <MatchTimelineFull setupEvents={setupEvents} turns={turns} eventsByTurn={eventsByTurn} />
       </main>

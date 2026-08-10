@@ -1,37 +1,282 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Cute pink + sky blue theme */
 :root {
-  --ink: #15232e;
-  --muted: #5a6b78;
-  --surface: #f7fafc;
-  --wash: #e7eef4;
-  --line: #c9d6e0;
-  --accent: #c62828;
-  --accent-2: #1b6b7a;
-  --bg0: #d9e6ef;
-  --bg1: #f3f7fa;
-  --shadow: 0 10px 30px rgba(21, 35, 46, 0.08);
+  --ink: #2f2a3a;
+  --muted: #6f6680;
+  --surface: #fff9fc;
+  --wash: #ffe8f3;
+  --line: #f0d0e4;
+  --accent: #ec5f9a;
+  --accent-2: #4aa3f0;
+  --accent-3: #f7a8c8;
+  --bg0: #fff0f7;
+  --bg1: #f3f8ff;
+  --bg2: #f8eefc;
+  --shadow: 0 12px 36px rgba(236, 95, 154, 0.14);
+  --glow: rgba(74, 163, 240, 0.18);
+  --card-radius: 1.25rem;
+}
+
+html.dark {
+  --ink: #f4eef8;
+  --muted: #b4a8c0;
+  --surface: #1c2030;
+  --wash: #2a2436;
+  --line: #3a4058;
+  --accent: #ff7eb3;
+  --accent-2: #6bbcff;
+  --accent-3: #f0a8cc;
+  --bg0: #12161f;
+  --bg1: #161b28;
+  --bg2: #1a1624;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  --glow: rgba(107, 188, 255, 0.14);
 }
 
 @theme inline {
   --color-background: var(--bg1);
   --color-foreground: var(--ink);
   --font-sans: var(--font-body);
-  --font-mono: var(--font-geist-mono);
 }
 
 body {
   min-height: 100vh;
   color: var(--ink);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-body), "Nunito", system-ui, sans-serif;
   background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(27, 107, 122, 0.18), transparent 60%),
-    radial-gradient(900px 400px at 100% 0%, rgba(198, 40, 40, 0.12), transparent 55%),
-    linear-gradient(180deg, var(--bg0), var(--bg1) 40%, #eef3f7);
+    radial-gradient(900px 420px at 8% -8%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 60%),
+    radial-gradient(800px 380px at 92% 0%, color-mix(in srgb, var(--accent-2) 32%, transparent), transparent 55%),
+    radial-gradient(700px 360px at 50% 110%, color-mix(in srgb, var(--accent-3) 28%, transparent), transparent 50%),
+    linear-gradient(165deg, var(--bg0), var(--bg1) 42%, var(--bg2));
   background-attachment: fixed;
+  transition: background 0.35s ease, color 0.25s ease;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-3) 55%, white);
+  color: var(--ink);
+}
+
+html.dark ::selection {
+  background: color-mix(in srgb, var(--accent-2) 40%, black);
+  color: var(--ink);
+}
+
+.font-display {
+  font-family: var(--font-display), "Fredoka", system-ui, sans-serif;
+}
+
+.ui-card {
+  border-radius: var(--card-radius);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 92%, white);
+  box-shadow: var(--shadow);
+}
+
+html.dark .ui-card {
+  background: color-mix(in srgb, var(--surface) 96%, black);
+}
+
+.ui-btn-primary {
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.ui-btn-secondary {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.badge-win {
+  background: color-mix(in srgb, var(--accent-2) 22%, var(--surface));
+  color: color-mix(in srgb, var(--accent-2) 70%, var(--ink));
+}
+.badge-loss {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink));
+}
+
+.ui-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ui-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.ui-error {
+  border-radius: var(--card-radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: color-mix(in srgb, var(--accent) 75%, var(--ink));
+}
+
+.ui-btn-danger {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: color-mix(in srgb, var(--accent) 80%, var(--ink));
+  font-weight: 600;
+}
+
+.text-danger {
+  color: color-mix(in srgb, var(--accent) 75%, var(--ink));
+}
+.text-success {
+  color: color-mix(in srgb, var(--accent-2) 70%, var(--ink));
+}
+.text-warn {
+  color: color-mix(in srgb, #d97706 65%, var(--ink));
+}
+
+.poke-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(2px);
+  opacity: 0.55;
+  pointer-events: none;
+  animation: floaty 8s ease-in-out infinite;
+}
+
+.poke-float {
+  position: absolute;
+  object-fit: contain;
+  opacity: 0.28;
+  filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--accent) 25%, transparent));
+  user-select: none;
+}
+
+html.dark .poke-float {
+  opacity: 0.22;
+}
+
+.poke-float-a {
+  animation: poke-bob 5.5s ease-in-out infinite;
+}
+.poke-float-b {
+  animation: poke-sway 6.5s ease-in-out infinite;
+  animation-delay: -1.2s;
+}
+.poke-float-c {
+  animation: poke-wiggle 4.8s ease-in-out infinite;
+  animation-delay: -0.6s;
+}
+.poke-float-d {
+  animation: poke-bob 7s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.poke-card-bob {
+  animation: poke-bob 3.8s ease-in-out infinite;
+}
+.poke-card-bob:nth-child(2) {
+  animation-delay: -0.7s;
+}
+.poke-card-bob:nth-child(3) {
+  animation-delay: -1.4s;
+}
+.poke-card-bob:nth-child(4) {
+  animation-delay: -2.1s;
+}
+
+.poke-spin-soft {
+  animation: poke-spin-soft 8s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes poke-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(3deg);
+  }
+}
+
+@keyframes poke-sway {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(2deg);
+  }
+  50% {
+    transform: translate(-10px, -12px) rotate(-4deg);
+  }
+}
+
+@keyframes poke-wiggle {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  33% {
+    transform: translateY(-10px) scale(1.04) rotate(4deg);
+  }
+  66% {
+    transform: translateY(-4px) scale(0.98) rotate(-3deg);
+  }
+}
+
+@keyframes poke-spin-soft {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poke-orb,
+  .poke-float,
+  .poke-card-bob,
+  .poke-spin-soft {
+    animation: none !important;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.ui-toast {
+  animation: toast-in 0.2s ease-out;
 }

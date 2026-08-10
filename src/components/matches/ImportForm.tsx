@@ -66,7 +66,7 @@ export function ImportForm({
           <select
             value={deckId}
             onChange={(e) => setDeckId(e.target.value)}
-            className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[var(--ink)]"
+            className="ui-input"
           >
             <option value="">No deck</option>
             {decks.map((d) => (
@@ -94,27 +94,27 @@ export function ImportForm({
             value={rawLog}
             onChange={(e) => setRawLog(e.target.value)}
             rows={20}
-            className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 font-mono text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            className="ui-input font-mono text-xs"
             placeholder="Setup&#10;Player chose tails..."
           />
         </label>
 
-        {error ? <p className="text-sm text-rose-700">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         <button
           type="submit"
           disabled={saving || !preview?.ok}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="ui-btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
         >
           {saving ? "Importing…" : "Save match"}
         </button>
       </div>
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]">
+      <div className="ui-card p-5">
         {!preview ? (
           <p className="text-sm text-[var(--muted)]">Paste or upload a PTCGL battle log to preview.</p>
         ) : !preview.ok ? (
-          <p className="text-sm text-rose-700">{preview.message}</p>
+          <p className="text-sm text-danger">{preview.message}</p>
         ) : (
           <div className="space-y-3 text-sm">
             <p>
@@ -125,7 +125,7 @@ export function ImportForm({
             </p>
             <p>
               <span className="text-[var(--muted)]">Result:</span>{" "}
-              <strong className={preview.result.result === "win" ? "text-emerald-700" : "text-rose-700"}>
+              <strong className={preview.result.result === "win" ? "text-success" : "text-danger"}>
                 {preview.result.result.toUpperCase()}
               </strong>
               <span className="text-[var(--muted)]">

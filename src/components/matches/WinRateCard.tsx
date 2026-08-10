@@ -13,17 +13,15 @@ export function WinRateCard({
   const pct = total ? Math.round(winRate * 1000) / 10 : 0;
 
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+    <div className="ui-card p-4">
       <p className="text-sm text-[var(--muted)]">{title}</p>
-      <p className="mt-1 font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
-        {total ? `${pct}%` : "—"}
-      </p>
+      <p className="mt-1 font-display text-3xl text-[var(--ink)]">{total ? `${pct}%` : "—"}</p>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {wins}W – {losses}L ({total} games)
+        {wins}W – {losses}L ({total} trận)
       </p>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--wash)]">
+      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--wash)]">
         <div
-          className="h-full rounded-full bg-[var(--accent)]"
+          className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)]"
           style={{ width: total ? `${(wins / total) * 100}%` : "0%" }}
         />
       </div>

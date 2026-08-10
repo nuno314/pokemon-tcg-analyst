@@ -31,7 +31,7 @@ export default async function DeckDetailPage({
       <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
+            <h1 className="font-display text-3xl text-[var(--ink)]">
               {deck.name}
             </h1>
             <p className="text-sm text-[var(--muted)]">
@@ -42,7 +42,7 @@ export default async function DeckDetailPage({
           <div className="flex gap-2">
             <Link
               href={`/decks/${deck.id}/edit`}
-              className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm"
+              className="ui-btn-secondary px-3 py-2 text-sm"
             >
               Edit
             </Link>
@@ -58,7 +58,7 @@ export default async function DeckDetailPage({
           {(["pokemon", "trainer", "energy"] as const).map((cat) => (
             <section
               key={cat}
-              className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]"
+              className="ui-card p-4"
             >
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                 {cat}
@@ -79,7 +79,7 @@ export default async function DeckDetailPage({
         </div>
 
         <section className="space-y-3">
-          <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
+          <h2 className="font-display text-xl text-[var(--ink)]">
             Matches with this deck
           </h2>
           <MatchList matches={matches} />

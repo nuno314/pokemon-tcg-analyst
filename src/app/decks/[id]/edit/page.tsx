@@ -18,7 +18,7 @@ export default async function EditDeckPage({
     <div>
       <AppNav ptcglName={profile.ptcglName} />
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
+        <h1 className="font-display text-3xl text-[var(--ink)]">
           Edit deck
         </h1>
         <DeckForm mode="edit" deckId={deck.id} initialName={deck.name} initialList={deck.rawList} />

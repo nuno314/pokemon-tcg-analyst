@@ -160,6 +160,54 @@ export const matchEvents = sqliteTable(
   ],
 );
 
+export const matchAnalyses = sqliteTable(
+  "match_analyses",
+  {
+    id: text("id").primaryKey(),
+    matchId: text("match_id")
+      .notNull()
+      .unique()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    summary: text("summary").notNull(),
+    goodPlays: text("good_plays").notNull(),
+    mistakes: text("mistakes").notNull(),
+    tips: text("tips").notNull(),
+    opponentNotes: text("opponent_notes").notNull(),
+    rawJson: text("raw_json"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+  },
+  (t) => [index("match_analyses_userId_idx").on(t.userId)],
+);
+
+export const playerAssessments = sqliteTable("player_assessments", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  matchCount: integer("match_count").notNull(),
+  archetype: text("archetype").notNull(),
+  summary: text("summary").notNull(),
+  strengths: text("strengths").notNull(),
+  weaknesses: text("weaknesses").notNull(),
+  focus: text("focus").notNull(),
+  rawJson: text("raw_json"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+});
+
 export const decksRelations = relations(decks, ({ many, one }) => ({
   cards: many(deckCards),
   matches: many(matches),

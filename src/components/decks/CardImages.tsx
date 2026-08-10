@@ -91,12 +91,12 @@ export function DeckCardGallery({
 
   return (
     <section className="space-y-3">
-      <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">{title}</h2>
+      <h2 className="font-display text-xl text-[var(--ink)]">{title}</h2>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
         {cards.map((c) => (
           <article
             key={c.id ?? `${c.setCode}-${c.collectorNumber}-${c.name}`}
-            className="relative flex flex-col items-center rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-[var(--shadow)]"
+            className="ui-card relative flex flex-col items-center p-2"
           >
             <span className="absolute right-2 top-2 z-10 rounded-md bg-[var(--accent)] px-1.5 py-0.5 text-xs font-bold text-white">
               ×{c.qty}

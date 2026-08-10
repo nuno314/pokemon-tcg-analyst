@@ -2,13 +2,17 @@ import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
 import { MatchList } from "@/components/matches/MatchList";
 import { WinRateCard } from "@/components/matches/WinRateCard";
+import { PlayerStyleCard } from "@/components/matches/PlayerStyleCard";
 import {
+  countUserMatches,
+  getPlayerAssessment,
   getWinRateStats,
   listDecks,
   listMatches,
   repairUserMatches,
   type RangeFilter,
 } from "@/lib/db/queries";
+import { t } from "@/lib/i18n/vi";
 import { requireProfile } from "@/lib/session";
 
 export default async function DashboardPage({
@@ -19,14 +23,16 @@ export default async function DashboardPage({
   const { session, profile } = await requireProfile();
   const sp = await searchParams;
   const range = (["all", "7d", "30d"].includes(sp.range ?? "") ? sp.range : "all") as RangeFilter;
+  const dict = t();
 
-  // Heal matches imported before winner-parsing fixes
   await repairUserMatches(session.user.id, profile.ptcglName);
 
-  const [stats, matches, decks] = await Promise.all([
+  const [stats, matches, decks, matchCount, assessment] = await Promise.all([
     getWinRateStats(session.user.id, range),
     listMatches(session.user.id, range),
     listDecks(session.user.id),
+    countUserMatches(session.user.id),
+    getPlayerAssessment(session.user.id),
   ]);
 
   const deckName = new Map(decks.map((d) => [d.id, d.name]));
@@ -37,26 +43,28 @@ export default async function DashboardPage({
       <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
-              Dashboard
+            <h1 className="font-display text-3xl text-[var(--ink)]">
+              {dict.dashboard.title}
             </h1>
-            <p className="text-sm text-[var(--muted)]">Playing as {profile.ptcglName}</p>
+            <p className="text-sm text-[var(--muted)]">
+              {dict.dashboard.playingAs} {profile.ptcglName}
+            </p>
           </div>
           <div className="flex gap-2 text-sm">
             {(
               [
-                ["all", "All time"],
-                ["7d", "7 days"],
-                ["30d", "30 days"],
+                ["all", dict.dashboard.allTime],
+                ["7d", dict.dashboard.days7],
+                ["30d", dict.dashboard.days30],
               ] as const
             ).map(([value, label]) => (
               <Link
                 key={value}
                 href={`/dashboard?range=${value}`}
-                className={`rounded-md px-3 py-1.5 ${
+                className={`rounded-full px-3 py-1.5 ${
                   range === value
-                    ? "bg-[var(--accent)] text-white"
-                    : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"
+                    ? "bg-[var(--accent)] text-white shadow-sm"
+                    : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--wash)]"
                 }`}
               >
                 {label}
@@ -65,21 +73,23 @@ export default async function DashboardPage({
           </div>
         </div>
 
+        <PlayerStyleCard matchCount={matchCount} initial={assessment} />
+
         <div className="grid gap-4 sm:grid-cols-3">
           <WinRateCard
-            title="Overall"
+            title={dict.dashboard.overall}
             wins={stats.wins}
             losses={stats.losses}
             winRate={stats.winRate}
           />
           <WinRateCard
-            title="Going first"
+            title={dict.dashboard.goingFirst}
             wins={stats.first.wins}
             losses={stats.first.total - stats.first.wins}
             winRate={stats.first.winRate}
           />
           <WinRateCard
-            title="Going second"
+            title={dict.dashboard.goingSecond}
             wins={stats.second.wins}
             losses={stats.second.total - stats.second.wins}
             winRate={stats.second.winRate}
@@ -88,15 +98,15 @@ export default async function DashboardPage({
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-              Win rate by deck
+            <h2 className="font-display text-xl text-[var(--ink)]">
+              {dict.dashboard.winRateByDeck}
             </h2>
             <Link href="/decks/new" className="text-sm text-[var(--accent)] hover:underline">
-              New deck
+              {dict.dashboard.newDeck}
             </Link>
           </div>
           {decks.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Create a deck to track matchups by list.</p>
+            <p className="text-sm text-[var(--muted)]">{dict.dashboard.createDeckHint}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {decks.map((deck) => {
@@ -106,13 +116,13 @@ export default async function DashboardPage({
                   <Link
                     key={deck.id}
                     href={`/decks/${deck.id}`}
-                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 transition hover:bg-[var(--wash)]"
+                    className="ui-card p-4 transition hover:bg-[var(--wash)]"
                   >
                     <p className="font-medium text-[var(--ink)]">{deck.name}</p>
                     <p className="mt-1 text-sm text-[var(--muted)]">
                       {total
                         ? `${Math.round((bucket.wins / total) * 1000) / 10}% · ${bucket.wins}W-${bucket.losses}L`
-                        : "No games yet"}
+                        : dict.dashboard.noGames}
                     </p>
                   </Link>
                 );
@@ -123,11 +133,11 @@ export default async function DashboardPage({
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)]">
-              Recent matches
+            <h2 className="font-display text-xl text-[var(--ink)]">
+              {dict.dashboard.recentMatches}
             </h2>
             <Link href="/matches/import" className="text-sm text-[var(--accent)] hover:underline">
-              Import log
+              {dict.dashboard.importLog}
             </Link>
           </div>
           <MatchList

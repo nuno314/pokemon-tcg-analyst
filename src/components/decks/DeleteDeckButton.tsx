@@ -26,7 +26,7 @@ export function DeleteDeckButton({ deckId }: { deckId: string }) {
       type="button"
       onClick={onDelete}
       disabled={loading}
-      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 disabled:opacity-50"
+      className="ui-btn-danger px-3 py-2 text-sm disabled:opacity-50"
     >
       {loading ? "Deleting…" : "Delete"}
     </button>

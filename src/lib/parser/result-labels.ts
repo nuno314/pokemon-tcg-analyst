@@ -4,11 +4,11 @@ export type EndReason = "concede" | "standard";
 export function formatEndReason(reason: string | null | undefined): string {
   switch (reason) {
     case "concede":
-      return "Concede";
+      return "Đối thủ/concede";
     case "standard":
-    case "win": // legacy value from earlier builds
-      return "Standard finish";
+    case "win":
+      return "Kết thúc chuẩn (KO/prize)";
     default:
-      return reason?.trim() ? reason : "Unknown";
+      return reason?.trim() ? reason : "Không rõ";
   }
 }

@@ -34,14 +34,14 @@ export function MatchTimelineFull({
     <div className="space-y-6">
       {setupEvents.length > 0 ? (
         <section>
-          <h2 className="mb-2 font-[family-name:var(--font-display)] text-lg text-[var(--ink)]">Setup</h2>
+          <h2 className="mb-2 font-display text-lg text-[var(--ink)]">Setup</h2>
           <EventBlock events={setupEvents} />
         </section>
       ) : null}
 
       {turns.map((turn) => (
         <section key={turn.id}>
-          <h2 className="mb-2 font-[family-name:var(--font-display)] text-lg text-[var(--ink)]">
+          <h2 className="mb-2 font-display text-lg text-[var(--ink)]">
             Turn {turn.turnNumber} · {turn.player}
           </h2>
           <EventBlock events={eventsByTurn[turn.id] ?? []} />
@@ -57,7 +57,7 @@ function EventBlock({ events }: { events: TimelineEvent[] }) {
   }
 
   return (
-    <ol className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+    <ol className="ui-card space-y-2 p-4">
       {events.map((event) => {
         const kids = childrenOf(event.payload);
         return (

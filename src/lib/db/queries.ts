@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "./index";
-import { deckCards, decks, matchEvents, matches, matchTurns, profiles } from "./schema";
+import { deckCards, decks, matchAnalyses, matchEvents, matches, matchTurns, playerAssessments, profiles } from "./schema";
 import { parseDeckList } from "../parser/deck-list";
 import { parseBattleLog, resolveMatchResult } from "../parser/ptcgl-log";
+import type { MatchAnalysisResult, PlayerAssessmentResult } from "../ai/analyze";
+import { PLAYER_ASSESSMENT_MIN_MATCHES } from "../i18n/vi";
 
 export function hashLog(raw: string) {
   return createHash("sha256").update(raw.trim()).digest("hex");
@@ -360,3 +362,99 @@ export async function getMatchDetail(userId: string, matchId: string) {
 
   return { match, turns, events };
 }
+
+export async function getMatchAnalysis(userId: string, matchId: string) {
+  const rows = await db
+    .select()
+    .from(matchAnalyses)
+    .where(and(eq(matchAnalyses.matchId, matchId), eq(matchAnalyses.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function saveMatchAnalysis(
+  userId: string,
+  matchId: string,
+  analysis: MatchAnalysisResult,
+) {
+  const existing = await getMatchAnalysis(userId, matchId);
+  const payload = {
+    summary: analysis.summary,
+    goodPlays: JSON.stringify(analysis.goodPlays),
+    mistakes: JSON.stringify(analysis.mistakes),
+    tips: JSON.stringify(analysis.tips),
+    opponentNotes: JSON.stringify(analysis.opponentNotes),
+    rawJson: JSON.stringify(analysis),
+    updatedAt: new Date(),
+  };
+
+  if (existing) {
+    await db.update(matchAnalyses).set(payload).where(eq(matchAnalyses.id, existing.id));
+    return { ...existing, ...payload, id: existing.id };
+  }
+
+  const id = randomUUID();
+  await db.insert(matchAnalyses).values({
+    id,
+    matchId,
+    userId,
+    ...payload,
+  });
+  return { id, matchId, userId, ...payload };
+}
+
+export async function getPlayerAssessment(userId: string) {
+  const rows = await db
+    .select()
+    .from(playerAssessments)
+    .where(eq(playerAssessments.userId, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function savePlayerAssessment(
+  userId: string,
+  matchCount: number,
+  assessment: PlayerAssessmentResult,
+) {
+  const existing = await getPlayerAssessment(userId);
+  const payload = {
+    matchCount,
+    archetype: assessment.archetype,
+    summary: assessment.summary,
+    strengths: JSON.stringify(assessment.strengths),
+    weaknesses: JSON.stringify(assessment.weaknesses),
+    focus: JSON.stringify(assessment.focus),
+    rawJson: JSON.stringify(assessment),
+    updatedAt: new Date(),
+  };
+
+  if (existing) {
+    await db.update(playerAssessments).set(payload).where(eq(playerAssessments.id, existing.id));
+    return { ...existing, ...payload, id: existing.id };
+  }
+
+  const id = randomUUID();
+  await db.insert(playerAssessments).values({ id, userId, ...payload });
+  return { id, userId, ...payload };
+}
+
+export async function countUserMatches(userId: string) {
+  const rows = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(matches)
+    .where(eq(matches.userId, userId));
+  return Number(rows[0]?.count ?? 0);
+}
+
+export function parseJsonStringArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+export { PLAYER_ASSESSMENT_MIN_MATCHES };

@@ -116,4 +116,33 @@ CREATE TABLE IF NOT EXISTS match_events (
 );
 CREATE INDEX IF NOT EXISTS match_events_matchId_idx ON match_events(match_id);
 CREATE INDEX IF NOT EXISTS match_events_turnId_idx ON match_events(turn_id);
+
+CREATE TABLE IF NOT EXISTS match_analyses (
+  id TEXT PRIMARY KEY NOT NULL,
+  match_id TEXT NOT NULL UNIQUE REFERENCES matches(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  summary TEXT NOT NULL,
+  good_plays TEXT NOT NULL,
+  mistakes TEXT NOT NULL,
+  tips TEXT NOT NULL,
+  opponent_notes TEXT NOT NULL,
+  raw_json TEXT,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
+CREATE INDEX IF NOT EXISTS match_analyses_userId_idx ON match_analyses(user_id);
+
+CREATE TABLE IF NOT EXISTS player_assessments (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL UNIQUE REFERENCES user(id) ON DELETE CASCADE,
+  match_count INTEGER NOT NULL,
+  archetype TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  strengths TEXT NOT NULL,
+  weaknesses TEXT NOT NULL,
+  focus TEXT NOT NULL,
+  raw_json TEXT,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
 `;

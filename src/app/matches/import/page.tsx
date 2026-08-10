@@ -1,23 +1,24 @@
 import { AppNav } from "@/components/AppNav";
 import { ImportForm } from "@/components/matches/ImportForm";
 import { listDecks } from "@/lib/db/queries";
+import { t } from "@/lib/i18n/vi";
 import { requireProfile } from "@/lib/session";
 
 export default async function ImportMatchPage() {
   const { session, profile } = await requireProfile();
   const decks = await listDecks(session.user.id);
+  const dict = t();
 
   return (
     <div>
       <AppNav ptcglName={profile.ptcglName} />
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-[var(--ink)]">
-            Import battle log
+          <h1 className="font-display text-3xl text-[var(--ink)]">
+            {dict.import.title}
           </h1>
           <p className="text-sm text-[var(--muted)]">
-            Export from the PTCGL results screen (clipboard), paste here, and attach the deck you
-            used. Matching player: <strong>{profile.ptcglName}</strong>
+            {dict.import.hint} {dict.import.matching}: <strong>{profile.ptcglName}</strong>
           </p>
         </div>
         <ImportForm

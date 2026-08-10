@@ -61,7 +61,7 @@ export function DeckForm({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            className="ui-input"
             placeholder="Mega Starmie Dreepy"
           />
         </label>
@@ -72,15 +72,15 @@ export function DeckForm({
             value={rawList}
             onChange={(e) => setRawList(e.target.value)}
             rows={22}
-            className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 font-mono text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            className="ui-input font-mono text-xs"
             placeholder="Pokémon: 9&#10;1 Meowth ex POR 62&#10;..."
           />
         </label>
-        {error ? <p className="text-sm text-rose-700">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button
           type="submit"
           disabled={saving || !preview?.ok}
-          className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="ui-btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
         >
           {saving ? "Saving…" : mode === "create" ? "Create deck" : "Save changes"}
         </button>
@@ -104,7 +104,7 @@ function DeckPreview({
   }
   if (!preview.ok) {
     return (
-      <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
+      <div className="ui-error p-6 text-sm">
         {preview.message}
       </div>
     );
@@ -118,7 +118,7 @@ function DeckPreview({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]">
+    <div className="space-y-4 ui-card p-5">
       <div className="flex flex-wrap gap-3 text-sm">
         <Stat label="Total" value={`${data.totalCards}`} ok={data.totalCards === 60} />
         <Stat label="Pokémon" value={`${data.pokemonTypes}`} />
@@ -126,7 +126,7 @@ function DeckPreview({
         <Stat label="Energy" value={`${data.energyTypes}`} />
       </div>
       {data.warnings.length > 0 ? (
-        <ul className="space-y-1 text-xs text-amber-800">
+        <ul className="space-y-1 text-xs text-warn">
           {data.warnings.map((w) => (
             <li key={w}>⚠ {w}</li>
           ))}
@@ -158,7 +158,7 @@ function Stat({ label, value, ok }: { label: string; value: string; ok?: boolean
   return (
     <div className="rounded-lg bg-[var(--wash)] px-3 py-2">
       <p className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</p>
-      <p className={`font-semibold ${ok === false ? "text-rose-700" : "text-[var(--ink)]"}`}>{value}</p>
+      <p className={`font-semibold ${ok === false ? "text-danger" : "text-[var(--ink)]"}`}>{value}</p>
     </div>
   );
 }

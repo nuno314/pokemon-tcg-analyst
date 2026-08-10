@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatEndReason } from "@/lib/parser/result-labels";
+import { t } from "@/lib/i18n/vi";
 
 export type MatchListItem = {
   id: string;
@@ -12,12 +13,13 @@ export type MatchListItem = {
 };
 
 export function MatchList({ matches }: { matches: MatchListItem[] }) {
+  const dict = t();
   if (matches.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-sm text-[var(--muted)]">
-        No matches yet.{" "}
+        Chưa có trận.{" "}
         <Link href="/matches/import" className="text-[var(--accent)] underline-offset-2 hover:underline">
-          Import a battle log
+          {dict.dashboard.importLog}
         </Link>
         .
       </p>
@@ -35,18 +37,16 @@ export function MatchList({ matches }: { matches: MatchListItem[] }) {
             <div>
               <p className="font-medium text-[var(--ink)]">vs {m.opponentName}</p>
               <p className="text-xs text-[var(--muted)]">
-                {m.deckName ?? "No deck"} · {formatEndReason(m.resultReason)}
-                {m.importedAt ? ` · ${new Date(m.importedAt).toLocaleString()}` : ""}
+                {m.deckName ?? "Chưa gắn deck"} · {formatEndReason(m.resultReason)}
+                {m.importedAt ? ` · ${new Date(m.importedAt).toLocaleString("vi-VN")}` : ""}
               </p>
             </div>
             <span
-              className={`rounded-md px-2 py-1 text-xs font-semibold uppercase ${
-                m.result === "win"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-rose-100 text-rose-800"
+              className={`rounded-full px-2 py-1 text-xs font-semibold uppercase ${
+                m.result === "win" ? "badge-win" : "badge-loss"
               }`}
             >
-              {m.result}
+              {m.result === "win" ? dict.common.win : dict.common.loss}
             </span>
           </Link>
         </li>

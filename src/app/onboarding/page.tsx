@@ -1,4 +1,5 @@
 import { OnboardingForm } from "@/components/OnboardingForm";
+import { ThemeToggle } from "@/components/ThemeProvider";
 import { getProfile, requireSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -8,7 +9,10 @@ export default async function OnboardingPage() {
   if (profile?.ptcglName) redirect("/dashboard");
 
   return (
-    <main className="mx-auto flex min-h-screen w-full items-center px-4 py-12">
+    <main className="relative mx-auto flex min-h-screen w-full items-center px-4 py-12">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <OnboardingForm />
     </main>
   );

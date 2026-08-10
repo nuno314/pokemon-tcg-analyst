@@ -5,12 +5,15 @@ import { StreamDocument } from "@/components/ai/Typewriter";
 import { PLAYER_ASSESSMENT_MIN_MATCHES, t } from "@/lib/i18n/vi";
 
 type Assessment = {
-  matchCount: number;
+  matchCount?: number;
   archetype: string;
+  playStyle?: string;
+  tempo?: string;
   summary: string;
   strengths: string;
   weaknesses: string;
   focus: string;
+  rawJson?: string | null;
 };
 
 function parseList(raw: string): string[] {
@@ -22,6 +25,36 @@ function parseList(raw: string): string[] {
   }
 }
 
+function normalizeAssessment(row: Assessment | null): Assessment | null {
+  if (!row) return null;
+  if (row.rawJson) {
+    try {
+      const parsed = JSON.parse(row.rawJson) as Partial<Assessment> & {
+        strengths?: string[];
+        weaknesses?: string[];
+        focus?: string[];
+      };
+      return {
+        ...row,
+        playStyle: parsed.playStyle ?? row.playStyle,
+        tempo: parsed.tempo ?? row.tempo,
+        summary: parsed.summary ?? row.summary,
+        archetype: parsed.archetype ?? row.archetype,
+        strengths: Array.isArray(parsed.strengths)
+          ? JSON.stringify(parsed.strengths)
+          : row.strengths,
+        weaknesses: Array.isArray(parsed.weaknesses)
+          ? JSON.stringify(parsed.weaknesses)
+          : row.weaknesses,
+        focus: Array.isArray(parsed.focus) ? JSON.stringify(parsed.focus) : row.focus,
+      };
+    } catch {
+      /* use row as-is */
+    }
+  }
+  return row;
+}
+
 export function PlayerStyleCard({
   matchCount,
   initial,
@@ -30,7 +63,7 @@ export function PlayerStyleCard({
   initial: Assessment | null;
 }) {
   const dict = t();
-  const [assessment, setAssessment] = useState(initial);
+  const [assessment, setAssessment] = useState(() => normalizeAssessment(initial));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
@@ -49,7 +82,7 @@ export function PlayerStyleCard({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? dict.common.error);
-      setAssessment(data.assessment);
+      setAssessment(normalizeAssessment(data.assessment));
       setStream(true);
       setStreamKey((k) => k + 1);
     } catch (e) {
@@ -61,13 +94,19 @@ export function PlayerStyleCard({
 
   const blocks = useMemo(() => {
     if (!assessment) return [];
-    return [
-      { key: "arch", title: "Phong cách", body: assessment.archetype },
+    const items: { key: string; title: string; body?: string; items?: string[] }[] = [
+      { key: "arch", title: "Phong cách chính", body: assessment.playStyle ?? assessment.archetype },
+    ];
+    if (assessment.tempo) {
+      items.push({ key: "tempo", title: "Tempo", body: assessment.tempo });
+    }
+    items.push(
       { key: "sum", title: "Tóm tắt", body: assessment.summary },
       { key: "str", title: "Điểm mạnh", items: parseList(assessment.strengths) },
       { key: "weak", title: "Điểm yếu", items: parseList(assessment.weaknesses) },
       { key: "focus", title: "Nên tập trung", items: parseList(assessment.focus) },
-    ];
+    );
+    return items;
   }, [assessment]);
 
   return (

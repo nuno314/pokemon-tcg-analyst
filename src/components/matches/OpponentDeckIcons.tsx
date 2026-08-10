@@ -7,10 +7,12 @@ export function OpponentDeckIcons({
   iconIds: number[];
   size?: number;
 }) {
-  if (iconIds.length === 0) {
+  const ids = iconIds.slice(0, 2);
+
+  if (ids.length === 0) {
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--line)] bg-[var(--wash)] text-[10px] font-semibold uppercase text-[var(--muted)]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--line)] bg-[var(--wash)] text-[10px] font-semibold uppercase text-[var(--muted)]"
         style={{ width: size, height: size }}
         aria-hidden
       >
@@ -19,14 +21,17 @@ export function OpponentDeckIcons({
     );
   }
 
-  const overlap = iconIds.length > 1;
+  const width = ids.length > 1 ? Math.round(size + size * 0.32) : size;
 
   return (
-    <div className={`relative shrink-0 ${overlap ? "w-[52px]" : ""}`} style={overlap ? undefined : { width: size }}>
-      {iconIds.slice(0, 2).map((id, i) => (
+    <div
+      className="flex shrink-0 items-center justify-start"
+      style={{ width, height: size, minWidth: width }}
+    >
+      {ids.map((id, i) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          key={id}
+          key={`${id}-${i}`}
           src={pokemonSpriteUrl(id)}
           alt=""
           width={size}
@@ -35,10 +40,9 @@ export function OpponentDeckIcons({
           style={{
             width: size,
             height: size,
-            position: overlap ? "absolute" : "relative",
-            left: overlap ? i * (size * 0.45) : 0,
-            top: 0,
-            zIndex: iconIds.length - i,
+            marginLeft: i > 0 ? Math.round(-size * 0.32) : 0,
+            position: "relative",
+            zIndex: ids.length - i,
           }}
           loading="lazy"
           decoding="async"

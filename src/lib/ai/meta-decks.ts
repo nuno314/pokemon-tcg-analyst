@@ -1,6 +1,7 @@
 /**
  * Meta decks Mega Evolution era — detect từ log + matchup/counter local.
  */
+import { extractOpponentCards } from "@/lib/ai/opponent-log-cards";
 export type MetaDeckId =
   | "dragapult"
   | "zoroark"
@@ -42,7 +43,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     id: "dragapult",
     name: "Dragapult ex",
     share: "49%",
-    keywords: /dragapult|phantom dive|drakloak|dreepy|dusknoir|munkidori/i,
+    keywords: /dragapult|phantom dive|drakloak|dreepy/i,
     engine:
       "Phantom Dive spread 60 damage lên bench; Drakloak draw engine; Munkidori/Dusknoir manipulate damage để pick off Mega ex setup trước multi-prize turn.",
     plan: "Bench snipe + spread — xé Mega ex và setup trước khi finish.",
@@ -119,7 +120,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     id: "slowking",
     name: "Slowking (Seek Inspiration)",
     share: "6%",
-    keywords: /slowking|seek inspiration|ciphermaniac|academy at night|metagross/i,
+    keywords: /slowking|seek inspiration|ciphermaniac|academy at night/i,
     engine:
       "Seek Inspiration discard top deck, copy attack non-Rule Box; Ciphermaniac/Academy at Night stack top cho burst (Metagross-style).",
     plan: "Top-deck manipulation + copy huge attack.",
@@ -165,7 +166,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     id: "alakazam",
     name: "Alakazam (Powerful Hand)",
     share: "5%",
-    keywords: /alakazam|powerful hand|dudunsparce|abra|kadabra/i,
+    keywords: /alakazam|powerful hand|abra|kadabra/i,
     engine: "Alakazam draw flood + Dudunsparce; Powerful Hand OHKO Active từ hand lớn.",
     plan: "Draw engine → one-shot Active.",
     keyCards: ["Alakazam", "Dudunsparce", "Powerful Hand"],
@@ -187,7 +188,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     id: "raging_bolt",
     name: "Raging Bolt ex",
     share: "4%",
-    keywords: /raging bolt|bellowing thunder|climactic descent|mega kangaskhan/i,
+    keywords: /raging bolt|bellowing thunder|climactic descent/i,
     engine:
       "Mega Kangaskhan + Teal Ogerpon draw/accel; discard Basic Energy fuel Bellowing Thunder OHKO Mega ex.",
     plan: "Aggressive scaling OHKO high-HP Mega.",
@@ -259,7 +260,7 @@ export const META_DECKS: MetaDeckGuide[] = [
     id: "honchkrow",
     name: "Rocket's Honchkrow",
     share: "2%",
-    keywords: /honchkrow|rocket's honchkrow|team rocket|murkrow|porygon2/i,
+    keywords: /honchkrow|rocket's honchkrow|murkrow|porygon2/i,
     engine:
       "1-prize anti-meta; Team Rocket supporter scale damage; OHKO Mega ex.",
     plan: "Single-prize aggro — trade 2-for-1 prize vs Mega ex.",
@@ -362,6 +363,42 @@ export function detectMetaDeck(cards: string[], logSnippet = ""): MetaDeckGuide 
   return null;
 }
 
+/** Chỉ match meta khi có thẻ **lõi** — tech chung (Dudunsparce, Munkidori, Meganium…) không đủ. */
+export const META_PRIMARY_CARDS: Record<MetaDeckId, string[]> = {
+  dragapult: ["Dragapult", "Drakloak", "Dreepy"],
+  zoroark: ["Zoroark", "Zorua", "Night Joker"],
+  crustle: ["Crustle", "Dwebble", "Rock Inn"],
+  slowking: ["Slowking", "Seek Inspiration", "Ciphermaniac"],
+  hydrapple: ["Hydrapple", "Syrup Storm"],
+  alakazam: ["Alakazam", "Powerful Hand"],
+  raging_bolt: ["Raging Bolt"],
+  ogerpon: ["Ogerpon", "Ogre's Mask", "Teal Mask"],
+  clefairy: ["Clefairy", "Full Moon Rondo"],
+  honchkrow: ["Honchkrow", "Murkrow"],
+  festival_lead: ["Festival Lead", "Festival Grounds", "Dipplin", "Thwackey"],
+  mega_lucario: ["Mega Lucario", "Lucario", "Solrock"],
+};
+
+export function cardMatchesPrimaryName(card: string, primary: string): boolean {
+  const n = card.toLowerCase().replace(/\s+ex$/, "").trim();
+  const key = primary.toLowerCase().replace(/\s+ex$/, "").trim();
+  if (!n || !key) return false;
+  if (n.length < 4 || key.length < 4) return n === key;
+  return n.includes(key) || key.includes(n);
+}
+
+export function detectMetaDeckFromCards(cards: string[]): MetaDeckGuide | null {
+  if (cards.length === 0) return null;
+  for (const id of DETECT_ORDER) {
+    const primary = META_PRIMARY_CARDS[id];
+    const matched = cards.some((c) =>
+      primary.some((p) => cardMatchesPrimaryName(c, p)),
+    );
+    if (matched) return DECK_BY_ID.get(id)!;
+  }
+  return null;
+}
+
 export function detectMetaLogSignals(
   log: string,
   deck: MetaDeckGuide,
@@ -414,13 +451,8 @@ export function aggregateMetaExposure(
   const map = new Map<MetaDeckId, { deck: MetaDeckGuide; wins: number; losses: number }>();
 
   for (const m of recent) {
-    const cards: string[] = [];
-    const cardRe = /(?:played|evolved .+ to|attached) ([^.]+?)(?:\.| to )/gi;
-    for (const hit of m.rawLog.matchAll(cardRe)) {
-      const name = hit[1]?.trim();
-      if (name && name.length < 50) cards.push(name);
-    }
-    const deck = detectMetaDeck(cards, m.rawLog.slice(0, 4000));
+    const cards = extractOpponentCards(m.rawLog, m.opponent);
+    const deck = detectMetaDeckFromCards(cards);
     if (!deck) continue;
     const row = map.get(deck.id) ?? { deck, wins: 0, losses: 0 };
     if (m.result === "win") row.wins += 1;

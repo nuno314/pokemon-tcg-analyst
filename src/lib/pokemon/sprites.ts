@@ -20,6 +20,25 @@ const CARD_TO_DEX: Record<string, number> = {
   dreepy: 885,
   dusknoir: 477,
   munkidori: 1015,
+  yveltal: 717,
+  pecharunt: 1025,
+  "pecharunt ex": 1025,
+  absol: 359,
+  "mega absol ex": 359,
+  "mega kangaskhan ex": 115,
+  shaymin: 492,
+  froslass: 478,
+  "mega froslass ex": 478,
+  snorunt: 361,
+  staryu: 120,
+  "mega starmie ex": 121,
+  shuppet: 353,
+  banette: 354,
+  dhelmise: 781,
+  dunsparce: 206,
+  dudunsparce: 982,
+  poltchageist: 1012,
+  sinistcha: 1013,
   "n's zoroark ex": 571,
   "n's zoroark": 571,
   "n's zorua": 570,
@@ -28,7 +47,11 @@ const CARD_TO_DEX: Record<string, number> = {
   dwebble: 557,
   slowking: 199,
   slowpoke: 79,
+  beldum: 374,
   metagross: 376,
+  metang: 375,
+  genesect: 649,
+  "genesect ex": 649,
   hydrapple: 1019,
   "hydrapple ex": 1019,
   dipplin: 1011,
@@ -38,10 +61,8 @@ const CARD_TO_DEX: Record<string, number> = {
   "alakazam ex": 65,
   abra: 63,
   kadabra: 64,
-  dudunsparce: 982,
   "raging bolt ex": 1021,
   "raging bolt": 1021,
-  "mega kangaskhan ex": 115,
   kangaskhan: 115,
   ogerpon: 1017,
   "teal mask ogerpon ex": 1017,
@@ -74,10 +95,15 @@ export function cardNameToDexId(name: string): number | null {
   if (CARD_TO_DEX[n]) return CARD_TO_DEX[n];
   const noEx = n.replace(/\s+ex$/, "").trim();
   if (CARD_TO_DEX[noEx]) return CARD_TO_DEX[noEx];
+
+  let best: { key: string; id: number } | null = null;
   for (const [key, id] of Object.entries(CARD_TO_DEX)) {
-    if (n.includes(key) || key.includes(noEx)) return id;
+    if (key.length < 4) continue;
+    if (n.includes(key) || noEx.includes(key)) {
+      if (!best || key.length > best.key.length) best = { key, id };
+    }
   }
-  return null;
+  return best?.id ?? null;
 }
 
 export function cardNamesToDexIds(names: string[], limit = 2): number[] {

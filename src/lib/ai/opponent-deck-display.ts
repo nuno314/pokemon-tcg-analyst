@@ -1,4 +1,9 @@
-import { detectMetaDeck, type MetaDeckGuide } from "@/lib/ai/meta-decks";
+import { detectMetaDeckFromCards, type MetaDeckGuide } from "@/lib/ai/meta-decks";
+import {
+  extractLastOpponentKoPokemon,
+  extractOpponentCards,
+  isTrainerOrEnergy,
+} from "@/lib/ai/opponent-log-cards";
 import { cardNameToDexId, cardNamesToDexIds } from "@/lib/pokemon/sprites";
 
 export type OpponentDeckDisplay = {
@@ -7,48 +12,52 @@ export type OpponentDeckDisplay = {
   isMeta: boolean;
 };
 
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export { extractLastOpponentKoPokemon, extractOpponentCards };
+
+function metaIconIds(deck: MetaDeckGuide, cards: string[]): number[] {
+  const matched = cards.filter((c) =>
+    deck.keyCards.some((k) => {
+      const key = k.toLowerCase().replace(/\s+ex$/, "");
+      return c.toLowerCase().includes(key);
+    }),
+  );
+  const fromLog = cardNamesToDexIds(matched, 2);
+  if (fromLog.length > 0) return fromLog;
+  return deck.iconIds.slice(0, 1);
 }
 
-export function extractOpponentCards(rawLog: string, opponentName: string): string[] {
-  const log = rawLog.slice(0, 8000);
-  const player = opponentName.trim();
-  if (!player) return [];
-
-  const names = new Set<string>();
-  const played = new RegExp(`${escapeRegExp(player)} played ([^.]+?)\\.`, "gi");
-  for (const m of log.matchAll(played)) {
-    const name = m[1]?.trim();
-    if (name && name.length < 60) names.add(name);
-  }
-  const evolved = new RegExp(`${escapeRegExp(player)} evolved .+ to ([^.]+?)\\.`, "gi");
-  for (const m of log.matchAll(evolved)) {
-    const name = m[1]?.trim();
-    if (name && name.length < 60) names.add(name);
-  }
-  const used = new RegExp(`${escapeRegExp(player)}'s (.+?) used `, "gi");
-  for (const m of log.matchAll(used)) {
-    const name = m[1]?.trim();
-    if (name && name.length < 60) names.add(name);
-  }
-
-  return [...names].slice(0, 16);
+function scorePokemon(name: string) {
+  return (/ ex$/i.test(name) ? 3 : 0) + (cardNameToDexId(name) ? 1 : 0);
 }
 
-function opponentLogSnippet(rawLog: string, opponentName: string): string {
-  const player = opponentName.trim().toLowerCase();
-  if (!player) return "";
-  return rawLog
-    .split("\n")
-    .filter((line) => line.toLowerCase().includes(player))
-    .join("\n")
-    .slice(0, 4000);
-}
+/** Nhãn thực tế từ log — không ép meta. */
+export function inferActualOpponentLabel(
+  cards: string[],
+  lastKo: string | null,
+): { name: string; iconIds: number[] } {
+  if (lastKo) {
+    const id = cardNameToDexId(lastKo);
+    return {
+      name: lastKo,
+      iconIds: id ? [id] : cardNamesToDexIds([lastKo], 1),
+    };
+  }
 
-function metaIconIds(deck: MetaDeckGuide): number[] {
-  if (deck.iconIds?.length) return deck.iconIds;
-  return cardNamesToDexIds(deck.keyCards, 2);
+  const pokemon = cards.filter((c) => !isTrainerOrEnergy(c));
+  const unique = [...new Set(pokemon)].sort((a, b) => scorePokemon(b) - scorePokemon(a));
+  const exes = unique.filter((c) => / ex$/i.test(c));
+  const top = (exes.length > 0 ? exes : unique).slice(0, 2);
+
+  if (top.length === 0) {
+    return { name: "", iconIds: [] };
+  }
+  if (top.length === 1) {
+    return { name: top[0], iconIds: cardNamesToDexIds(top, 1) };
+  }
+  return {
+    name: `${top[0]} · ${top[1]}`,
+    iconIds: cardNamesToDexIds(top, 2),
+  };
 }
 
 export function resolveOpponentDeckDisplay(
@@ -56,26 +65,21 @@ export function resolveOpponentDeckDisplay(
   opponentName: string,
 ): OpponentDeckDisplay {
   const cards = extractOpponentCards(rawLog, opponentName);
-  const snippet = opponentLogSnippet(rawLog, opponentName);
-  const meta = detectMetaDeck(cards, snippet);
+  const lastKo = extractLastOpponentKoPokemon(rawLog, opponentName);
+  const meta = detectMetaDeckFromCards(cards);
 
   if (meta) {
     return {
       name: meta.name,
-      iconIds: metaIconIds(meta),
+      iconIds: metaIconIds(meta, cards),
       isMeta: true,
     };
   }
 
-  const iconIds = cardNamesToDexIds(cards, 2);
-  if (iconIds.length > 0) {
-    const lead = cards.find((c) => cardNamesToDexIds([c], 1).length > 0) ?? cards[0];
-    return {
-      name: lead ?? null,
-      iconIds,
-      isMeta: false,
-    };
-  }
-
-  return { name: null, iconIds: [], isMeta: false };
+  const actual = inferActualOpponentLabel(cards, lastKo);
+  return {
+    name: actual.name || null,
+    iconIds: actual.iconIds,
+    isMeta: false,
+  };
 }

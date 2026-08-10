@@ -7,9 +7,16 @@ import {
 } from "./coaching-knowledge";
 import {
   aggregateMetaExposure,
-  detectMetaDeck,
+  detectMetaDeckFromCards,
   metaMatchupNotes,
 } from "./meta-decks";
+import { inferActualOpponentLabel } from "./opponent-deck-display";
+import { extractOpponentCards, extractLastOpponentKoPokemon } from "./opponent-log-cards";
+import {
+  inferPlayStyleFromRecent,
+  inferTempoLabel,
+  playStyleFocusTips,
+} from "./playstyles";
 import type { MatchAnalysisResult, PlayerAssessmentResult } from "./analyze";
 
 const LOG_SLICE = 8000;
@@ -75,21 +82,23 @@ function isMe(wentFirst: string | null, ptcglName: string) {
   return wentFirst.toLowerCase() === ptcglName.toLowerCase();
 }
 
-function guessArchetype(cards: string[], logSnippet = ""): string {
-  const meta = detectMetaDeck(cards, logSnippet);
+function guessArchetype(cards: string[], opponentName: string, rawLog: string): string {
+  const meta = detectMetaDeckFromCards(cards);
   if (meta) return `${meta.name} (meta ~${meta.share})`;
+
+  const lastKo = extractLastOpponentKoPokemon(rawLog, opponentName);
+  const actual = inferActualOpponentLabel(cards, lastKo);
+  if (actual.name) return actual.name;
+
   const blob = cards.join(" ").toLowerCase();
   if (/charizard|pidgeot|rare candy/.test(blob)) return "Charizard / Stage engine";
-  if (/dragapult|drakloak|dreepy|dusknoir/.test(blob)) return "Dragapult line";
   if (/gardevoir|ralt/.test(blob)) return "Gardevoir";
   if (/lugia|archeops/.test(blob)) return "Lugia";
   if (/lost (box|zone)|comfey|mirror box/.test(blob)) return "Lost Box";
-  if (/roaring moon|ancient/.test(blob)) return "Ancient / Roaring Moon";
   if (/miraidon|regieleki|iron hands|future/.test(blob)) return "Future box";
   if (/terapagos|area zero/.test(blob)) return "Terapagos";
-  if (/starmie|froslass|snorunt/.test(blob)) return "Starmie / Frost line";
-  if (/metagross|beldum|genesect|cinccino/.test(blob)) return "Metal toolbox";
-  if (cards.length >= 3) return `Line chính xoay quanh ${cards.slice(0, 2).join(", ")}`;
+  if (/banette|shuppet|dhelmise|sinistcha|poltchageist/.test(blob)) return "Banette / Dhelmise box";
+  if (cards.length >= 2) return `Line: ${cards.slice(0, 2).join(", ")}`;
   return "Archetype chưa rõ (log ít tên bài)";
 }
 
@@ -284,10 +293,10 @@ export function analyzeMatchLocal(input: MatchInput): MatchAnalysisResult {
     parsed?.wentFirst?.toLowerCase() === me.toLowerCase();
 
   const myCards = uniqueCardsPlayedBy(log, me);
-  const oppCards = uniqueCardsPlayedBy(log, opp);
-  const myArch = guessArchetype(myCards, log);
-  const oppArch = guessArchetype(oppCards, log);
-  const oppMeta = detectMetaDeck(oppCards, log);
+  const oppCards = extractOpponentCards(input.rawLog, opp);
+  const myArch = guessArchetype(myCards, me, log);
+  const oppArch = guessArchetype(oppCards, opp, log);
+  const oppMeta = detectMetaDeckFromCards(oppCards);
   const moments = extractKeyMoments(parsed, me, opp, log);
 
   const goodPlays: string[] = [];
@@ -411,12 +420,17 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
   const second = input.secondWinRate;
   const patterns = aggregatePlayerPatterns(input.ptcglName, input.recent);
 
-  let archetype = "All-rounder";
-  if (wr >= 0.6 && first >= second + 0.1) archetype = "First-turn aggressor";
-  else if (wr >= 0.6 && second >= first + 0.1) archetype = "Second-player stabilizer";
-  else if (wr < 0.4) archetype = "Đang tìm nhịp (inconsistent)";
-  else if (first < 0.35 && input.matchCount >= 10) archetype = "Yếu khi đi trước";
-  else if (second < 0.35 && input.matchCount >= 10) archetype = "Yếu khi đi sau";
+  const playStyle = inferPlayStyleFromRecent(
+    input.ptcglName,
+    input.recent.map((r) => ({
+      opponent: r.opponent,
+      result: r.result,
+      rawLog: r.rawLog,
+      wentFirst: r.wentFirst,
+    })),
+  );
+  const tempo = inferTempoLabel(wr, first, second, input.matchCount);
+  const archetype = `${playStyle.label} · ${tempo}`;
 
   const bestDeck = [...input.deckStats].sort(
     (a, b) => b.wins / Math.max(1, b.wins + b.losses) - a.wins / Math.max(1, a.wins + a.losses),
@@ -496,6 +510,11 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
     })),
   );
 
+  for (const tip of playStyleFocusTips(playStyle.id)) {
+    focus.push(`[${playStyle.label}] ${tip}`);
+  }
+  strengths.unshift(playStyle.summary);
+
   const metaExposure = aggregateMetaExposure(
     input.recent.map((r) => ({ opponent: r.opponent, result: r.result, rawLog: r.rawLog })),
   );
@@ -522,12 +541,14 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
   if (strengths.length === 0) strengths.push("Đã có sample — tiếp tục import để review sắc hơn.");
   if (weaknesses.length === 0) weaknesses.push("Chưa thấy lỗi lặp rõ — thêm trận vs meta khác nhau.");
 
-  const summary = `${input.ptcglName} sau ${input.matchCount} trận: phong cách “${archetype}”. ${form}. ${
+  const summary = `${input.ptcglName} sau ${input.matchCount} trận: ${playStyle.label}, tempo “${tempo}”. ${form}. ${
     patterns[0] ?? `Win rate ${Math.round(wr * 100)}%.`
   } Nên tập trung: ${COACHING.prize_checking.title.toLowerCase()}, ${COACHING.prize_mapping.title.toLowerCase()}, ${COACHING.sequencing.title.toLowerCase()}.`;
 
   return {
     archetype,
+    playStyle: playStyle.label,
+    tempo,
     summary,
     strengths: unique(strengths).slice(0, 6),
     weaknesses: unique(weaknesses).slice(0, 5),

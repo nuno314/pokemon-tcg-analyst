@@ -49,7 +49,9 @@ export function MatchList({
               href={`/matches/${m.id}`}
               className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--wash)]"
             >
-              <OpponentDeckIcons iconIds={iconIds} size={compact ? 36 : 40} />
+              <div className="flex w-11 shrink-0 items-center justify-center sm:w-12">
+                <OpponentDeckIcons iconIds={iconIds} size={compact ? 36 : 40} />
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-[var(--ink)]">vs {m.opponentName}</p>
                 <p className="truncate text-xs text-[var(--muted)]">

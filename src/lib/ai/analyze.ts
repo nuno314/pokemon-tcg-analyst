@@ -10,6 +10,8 @@ export type MatchAnalysisResult = {
 
 export type PlayerAssessmentResult = {
   archetype: string;
+  playStyle: string;
+  tempo: string;
   summary: string;
   strengths: string[];
   weaknesses: string[];

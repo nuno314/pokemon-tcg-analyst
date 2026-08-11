@@ -57,13 +57,11 @@ function normalizeAssessment(row: Assessment | null): Assessment | null {
 
 export function PlayerStyleCard({
   matchCount,
-  initial,
 }: {
   matchCount: number;
-  initial: Assessment | null;
 }) {
   const dict = t();
-  const [assessment, setAssessment] = useState(() => normalizeAssessment(initial));
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState(false);

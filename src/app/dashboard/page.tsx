@@ -7,7 +7,6 @@ import { PlayerStyleCard } from "@/components/matches/PlayerStyleCard";
 import {
   countUserAnalysesSince,
   countUserMatches,
-  getPlayerAssessment,
   getWinRateStats,
   listDecks,
   listMatches,
@@ -37,13 +36,12 @@ export default async function DashboardPage({
   const todayKey = dayKey(now);
   const todayStart = dayStartUtc(todayKey);
 
-  const [stats, matches, decks, matchCount, assessment, allMatches, analysisToday] =
+  const [stats, matches, decks, matchCount, allMatches, analysisToday] =
     await Promise.all([
       getWinRateStats(session.user.id, range),
       listMatches(session.user.id, range),
       listDecks(session.user.id),
       countUserMatches(session.user.id),
-      getPlayerAssessment(session.user.id),
       listMatches(session.user.id, "all"),
       countUserAnalysesSince(session.user.id, todayStart),
     ]);
@@ -130,7 +128,7 @@ export default async function DashboardPage({
               />
             </div>
 
-            <PlayerStyleCard matchCount={matchCount} initial={assessment} />
+            <PlayerStyleCard matchCount={matchCount} />
 
             <QuestBoard board={questBoard} heatmap={questHeatmap.weeks} year={questHeatmap.year} />
 

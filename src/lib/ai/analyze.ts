@@ -31,6 +31,7 @@ export async function analyzeMatchWithAi(input: {
   deckName: string | null;
   turnCount: number;
   rawLog: string;
+  userNote?: string | null;
 }): Promise<MatchAnalysisResult> {
   return analyzeMatchLocal(input);
 }

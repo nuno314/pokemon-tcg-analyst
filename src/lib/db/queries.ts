@@ -335,6 +335,7 @@ export async function listRecentMatchesWithLogs(userId: string, limit = 10) {
       resultReason: matches.resultReason,
       wentFirst: matches.wentFirst,
       rawLog: matches.rawLog,
+      userNote: matches.userNote,
       deckName: decks.name,
     })
     .from(matches)
@@ -357,6 +358,7 @@ export async function getMatchDetail(userId: string, matchId: string) {
       deckId: matches.deckId,
       deckName: decks.name,
       rawLog: matches.rawLog,
+      userNote: matches.userNote,
     })
     .from(matches)
     .leftJoin(decks, eq(matches.deckId, decks.id))
@@ -379,6 +381,23 @@ export async function getMatchDetail(userId: string, matchId: string) {
     .orderBy(matchEvents.seq);
 
   return { match, turns, events };
+}
+
+const MAX_USER_NOTE = 2000;
+
+export async function updateMatchNote(userId: string, matchId: string, note: string) {
+  const trimmed = note.trim().slice(0, MAX_USER_NOTE);
+  const existing = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(and(eq(matches.id, matchId), eq(matches.userId, userId)))
+    .limit(1);
+  if (!existing[0]) return null;
+  await db
+    .update(matches)
+    .set({ userNote: trimmed })
+    .where(and(eq(matches.id, matchId), eq(matches.userId, userId)));
+  return { id: matchId, userNote: trimmed };
 }
 
 export async function getMatchAnalysis(userId: string, matchId: string) {

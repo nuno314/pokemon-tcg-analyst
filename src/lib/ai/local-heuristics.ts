@@ -29,6 +29,7 @@ type MatchInput = {
   deckName: string | null;
   turnCount: number;
   rawLog: string;
+  userNote?: string | null;
 };
 
 export type RecentMatchWithLog = {
@@ -38,6 +39,7 @@ export type RecentMatchWithLog = {
   wentFirst: string | null;
   deck: string | null;
   rawLog: string;
+  userNote?: string | null;
 };
 
 type PlayerInput = {
@@ -389,6 +391,14 @@ export function analyzeMatchLocal(input: MatchInput): MatchAnalysisResult {
   const signals = analyzeMatchSignals(log, parsed, me, opp, wentFirstMe ?? false, turnCount);
   applyCoachingToMatch(signals, input.result, tips, mistakes);
 
+  const note = input.userNote?.trim();
+  if (note) {
+    tips.unshift(`[Ghi chú của bạn] ${note.slice(0, 280)}${note.length > 280 ? "…" : ""}`);
+    tips.push(
+      "Bạn đã tự ghi nhận điểm then chốt — lần phân tích lại sau khi sửa note sẽ phản ánh insight đó.",
+    );
+  }
+
   const deckPart = input.deckName ? ` với deck "${input.deckName}"` : "";
   const endPart = conceded
     ? `${opp} concede.`
@@ -400,6 +410,7 @@ export function analyzeMatchLocal(input: MatchInput): MatchAnalysisResult {
     wentFirstMe ? "đi trước" : input.wentFirst ? "đi sau" : "",
     `sau ${turnCount} turn, ${endPart}`,
     `Line bạn: ${myArch}. Đối thủ: ${oppArch}.`,
+    note ? `Ghi chú người chơi: ${note.slice(0, 120)}${note.length > 120 ? "…" : ""}.` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -515,6 +526,27 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
   }
   strengths.unshift(playStyle.summary);
 
+  const recentNotes = input.recent
+    .map((r) => r.userNote?.trim())
+    .filter((n): n is string => Boolean(n && n.length > 0));
+  if (recentNotes.length > 0) {
+    const blob = recentNotes.join(" ").toLowerCase();
+    if (/boss|gust|switch/.test(blob)) {
+      focus.push("Ghi chú gần đây hay nhắc Boss/gust — ưu tiên ôn timing gust khi review trận thua.");
+    }
+    if (/energy|brick|attach|neo upper|metal maker/.test(blob)) {
+      focus.push("Ghi chú gần đây hay nhắc energy/brick — luyện opening attach và recovery (Rod/Retrieval).");
+    }
+    if (/prize|map|2.?prize|ohko/.test(blob)) {
+      focus.push("Ghi chú gần đây hay nhắc prize map — trước mỗi turn hỏi cần mấy prize còn lại.");
+    }
+    for (const n of recentNotes.slice(0, 3)) {
+      focus.push(
+        `[Ghi chú trận] ${n.slice(0, 100)}${n.length > 100 ? "…" : ""}`,
+      );
+    }
+  }
+
   const metaExposure = aggregateMetaExposure(
     input.recent.map((r) => ({ opponent: r.opponent, result: r.result, rawLog: r.rawLog })),
   );
@@ -537,11 +569,15 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
   if (focus.length === 0) {
     focus.push("Import đều và đa dạng matchup để pattern rõ hơn.");
   }
-  if (focus.length > 5) focus.length = 5;
+  if (focus.length > 7) focus.length = 7;
   if (strengths.length === 0) strengths.push("Đã có sample — tiếp tục import để review sắc hơn.");
   if (weaknesses.length === 0) weaknesses.push("Chưa thấy lỗi lặp rõ — thêm trận vs meta khác nhau.");
 
-  const summary = `${input.ptcglName} sau ${input.matchCount} trận: ${playStyle.label}, tempo “${tempo}”. ${form}. ${
+  const noteBit =
+    recentNotes.length > 0
+      ? ` Đã đọc ${recentNotes.length} ghi chú trận gần đây.`
+      : "";
+  const summary = `${input.ptcglName} sau ${input.matchCount} trận: ${playStyle.label}, tempo “${tempo}”. ${form}.${noteBit} ${
     patterns[0] ?? `Win rate ${Math.round(wr * 100)}%.`
   } Nên tập trung: ${COACHING.prize_checking.title.toLowerCase()}, ${COACHING.prize_mapping.title.toLowerCase()}, ${COACHING.sequencing.title.toLowerCase()}.`;
 
@@ -552,7 +588,7 @@ export function assessPlayerLocal(input: PlayerInput): PlayerAssessmentResult {
     summary,
     strengths: unique(strengths).slice(0, 6),
     weaknesses: unique(weaknesses).slice(0, 5),
-    focus: unique(focus).slice(0, 5),
+    focus: unique(focus).slice(0, 7),
   };
 }
 

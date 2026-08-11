@@ -81,6 +81,7 @@ export async function POST(request: Request) {
         deck: m.deckName,
         wentFirst: m.wentFirst,
         rawLog: m.rawLog,
+        userNote: m.userNote,
       })),
     });
 

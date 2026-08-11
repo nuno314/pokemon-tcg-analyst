@@ -49,6 +49,7 @@ export async function POST(request: Request, ctx: Ctx) {
       deckName: detail.match.deckName,
       turnCount: detail.turns.length,
       rawLog: detail.match.rawLog,
+      userNote: detail.match.userNote,
     });
 
     const saved = await saveMatchAnalysis(authz.session.user.id, id, analyzed);

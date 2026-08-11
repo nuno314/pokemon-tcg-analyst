@@ -119,6 +119,7 @@ export const matches = sqliteTable(
     winner: text("winner"),
     result: text("result", { enum: ["win", "loss"] }).notNull(),
     resultReason: text("result_reason"),
+    userNote: text("user_note").notNull().default(""),
     importedAt: integer("imported_at", { mode: "timestamp_ms" }).notNull().default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
   },
   (t) => [

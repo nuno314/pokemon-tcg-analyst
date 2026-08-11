@@ -39,6 +39,21 @@ describe("analyzeMatchLocal", () => {
     const joined = [...out.goodPlays, ...out.mistakes, ...out.tips].join(" ");
     expect(joined).toMatch(/Turn \d+/);
   });
+
+  it("surfaces user notes in tips and summary", () => {
+    const out = analyzeMatchLocal({
+      ptcglName: "Fairy_VN",
+      opponentName: "zyfggotg",
+      result: "loss",
+      wentFirst: "Fairy_VN",
+      deckName: "Mega Starmie",
+      turnCount: 8,
+      rawLog: sampleLog,
+      userNote: "Turn 5 Boss Metang quá muộn",
+    });
+    expect(out.summary).toMatch(/Ghi chú người chơi|Boss Metang/i);
+    expect(out.tips.some((t) => /Ghi chú của bạn|Boss Metang/i.test(t))).toBe(true);
+  });
 });
 
 describe("assessPlayerLocal", () => {

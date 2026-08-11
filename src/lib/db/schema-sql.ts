@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS matches (
   winner TEXT,
   result TEXT NOT NULL,
   result_reason TEXT,
+  user_note TEXT NOT NULL DEFAULT '',
   imported_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
 );
 CREATE INDEX IF NOT EXISTS matches_userId_importedAt_idx ON matches(user_id, imported_at);

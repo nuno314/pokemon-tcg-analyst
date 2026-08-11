@@ -84,6 +84,13 @@ export const vi = {
     tips: "Hướng xử lý",
     vsNotes: "Lưu ý khi gặp đối thủ này / archetype",
     summary: "Tóm tắt",
+    userNoteTitle: "Ghi chú của bạn",
+    userNoteHint:
+      "Lưu ý riêng sau trận — AI sẽ đọc để phân tích sát hơn khi bạn chạy Analyst / đánh giá phong cách.",
+    userNotePlaceholder: "Ví dụ: Turn 5 Boss Metang quá muộn; nên snipe Beldum sớm hơn…",
+    userNoteSave: "Lưu ghi chú",
+    userNoteSaving: "Đang lưu…",
+    userNoteSaved: "Đã lưu ghi chú.",
   },
   decks: {
     title: "Deck",

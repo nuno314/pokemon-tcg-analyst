@@ -33,8 +33,20 @@ export const db = drizzle(client, { schema });
 
 let migrated = false;
 
+async function safeAddColumn(sql: string) {
+  try {
+    await client.execute(sql);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/duplicate column|already exists/i.test(msg)) throw e;
+  }
+}
+
 export async function ensureDb() {
   if (migrated) return;
   await client.executeMultiple(SCHEMA_SQL);
+  await safeAddColumn(
+    "ALTER TABLE matches ADD COLUMN user_note TEXT NOT NULL DEFAULT ''",
+  );
   migrated = true;
 }

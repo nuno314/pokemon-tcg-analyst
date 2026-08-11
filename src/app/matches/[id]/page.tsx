@@ -5,6 +5,7 @@ import { ExportBattleLogButton } from "@/components/matches/ExportBattleLogButto
 import { MatchAiAnalyst } from "@/components/matches/MatchAiAnalyst";
 import { MatchReplayPlayer } from "@/components/matches/MatchReplayPlayer";
 import { MatchTimelineFull } from "@/components/matches/MatchTimeline";
+import { MatchUserNote } from "@/components/matches/MatchUserNote";
 import { getMatchAnalysis, getMatchDetail } from "@/lib/db/queries";
 import { formatEndReason } from "@/lib/parser/result-labels";
 import { t } from "@/lib/i18n/vi";
@@ -76,6 +77,8 @@ export default async function MatchDetailPage({
         </div>
 
         <MatchReplayPlayer rawLog={match.rawLog} ptcglName={profile.ptcglName} />
+
+        <MatchUserNote matchId={id} initialNote={match.userNote ?? ""} />
 
         <MatchAiAnalyst
           matchId={id}

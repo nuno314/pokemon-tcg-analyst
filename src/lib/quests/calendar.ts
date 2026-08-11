@@ -129,10 +129,6 @@ export function buildQuestHeatmap(
   return { weeks, total };
 }
 
-export function sliceHeatmapWeeks(weeks: QuestHeatmapWeek[], lastN: number): QuestHeatmapWeek[] {
-  return weeks.slice(Math.max(0, weeks.length - lastN));
-}
-
 export function buildQuestChart(
   completions: { dayKey: string }[],
   range: QuestChartRange,

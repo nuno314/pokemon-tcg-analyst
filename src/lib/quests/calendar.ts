@@ -68,6 +68,71 @@ function formatMonthLabel(key: string) {
   return `T${Number(m)}/${y.slice(2)}`;
 }
 
+export type QuestHeatmapDay = {
+  key: string;
+  count: number;
+  /** Placeholder before the 12-month window starts. */
+  empty: boolean;
+};
+
+export type QuestHeatmapWeek = {
+  monthLabel: string | null;
+  days: QuestHeatmapDay[];
+};
+
+const MONTH_LABELS = ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"];
+
+function weekdaySun0(key: string, offsetMinutes = QUEST_TZ_OFFSET_MINUTES) {
+  const shifted = new Date(dayStartUtc(key, offsetMinutes).getTime() + offsetMinutes * 60_000);
+  return shifted.getUTCDay();
+}
+
+/** GitHub-style 53-week grid (Sun–Sat columns), ending today. */
+export function buildQuestHeatmap(
+  completions: { dayKey: string }[],
+  now: Date,
+  weekCount = 53,
+  offsetMinutes = QUEST_TZ_OFFSET_MINUTES,
+): { weeks: QuestHeatmapWeek[]; total: number } {
+  const today = dayKey(now, offsetMinutes);
+  const counts = new Map<string, number>();
+  for (const row of completions) {
+    counts.set(row.dayKey, (counts.get(row.dayKey) ?? 0) + 1);
+  }
+
+  const todayWd = weekdaySun0(today, offsetMinutes);
+  const daysBack = (weekCount - 1) * 7 + todayWd;
+  const gridStart = addDays(today, -daysBack, offsetMinutes);
+
+  const weeks: QuestHeatmapWeek[] = [];
+  let prevMonth = 0;
+  let total = 0;
+
+  for (let w = 0; w < weekCount; w += 1) {
+    const days: QuestHeatmapDay[] = [];
+    let monthLabel: string | null = null;
+    for (let d = 0; d < 7; d += 1) {
+      const key = addDays(gridStart, w * 7 + d, offsetMinutes);
+      const afterToday = key > today;
+      const count = afterToday ? 0 : (counts.get(key) ?? 0);
+      if (!afterToday) total += count;
+      days.push({ key, count, empty: afterToday });
+      const month = Number(key.slice(5, 7));
+      if (!afterToday && month !== prevMonth) {
+        monthLabel = MONTH_LABELS[month - 1] ?? null;
+        prevMonth = month;
+      }
+    }
+    weeks.push({ monthLabel, days });
+  }
+
+  return { weeks, total };
+}
+
+export function sliceHeatmapWeeks(weeks: QuestHeatmapWeek[], lastN: number): QuestHeatmapWeek[] {
+  return weeks.slice(Math.max(0, weeks.length - lastN));
+}
+
 export function buildQuestChart(
   completions: { dayKey: string }[],
   range: QuestChartRange,

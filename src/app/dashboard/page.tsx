@@ -16,7 +16,7 @@ import {
   type RangeFilter,
 } from "@/lib/db/queries";
 import { enrichMatchListItems } from "@/lib/matches/enrich-list";
-import { buildQuestChart, dayKey, dayStartUtc } from "@/lib/quests/calendar";
+import { buildQuestHeatmap, dayKey, dayStartUtc } from "@/lib/quests/calendar";
 import { generateQuestBoard } from "@/lib/quests/generate";
 import { t } from "@/lib/i18n/vi";
 import { requireProfile } from "@/lib/session";
@@ -64,11 +64,7 @@ export default async function DashboardPage({
         questBoard.quests.filter((q) => q.done).map((q) => q.id),
       )
     : [];
-  const questCharts = {
-    week: buildQuestChart(completions, "week", now),
-    month: buildQuestChart(completions, "month", now),
-    year: buildQuestChart(completions, "year", now),
-  };
+  const questHeatmap = buildQuestHeatmap(completions, now).weeks;
   const matchListItems = enrichMatchListItems(matches, deckName);
 
   return (
@@ -130,7 +126,7 @@ export default async function DashboardPage({
 
             <PlayerStyleCard matchCount={matchCount} initial={assessment} />
 
-            <QuestBoard board={questBoard} charts={questCharts} />
+            <QuestBoard board={questBoard} heatmap={questHeatmap} />
 
             <section className="space-y-3">
               <div className="flex items-center justify-between">

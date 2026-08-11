@@ -1,15 +1,15 @@
 import Link from "next/link";
-import type { QuestChartPoint } from "@/lib/quests/calendar";
+import type { QuestHeatmapWeek } from "@/lib/quests/calendar";
 import type { QuestBoardData } from "@/lib/quests/generate";
 import { QuestProgressChart } from "@/components/matches/QuestProgressChart";
 import { QuestResetCountdown } from "@/components/matches/QuestResetCountdown";
 
 export function QuestBoard({
   board,
-  charts,
+  heatmap,
 }: {
   board: QuestBoardData;
-  charts: { week: QuestChartPoint[]; month: QuestChartPoint[]; year: QuestChartPoint[] };
+  heatmap: QuestHeatmapWeek[];
 }) {
   if (!board.unlocked) {
     return (
@@ -97,7 +97,7 @@ export function QuestBoard({
         ))}
       </ul>
 
-      <QuestProgressChart week={charts.week} month={charts.month} year={charts.year} />
+      <QuestProgressChart weeks={heatmap} />
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildQuestChart, dayKey, nextResetAt } from "./calendar";
+import { buildQuestChart, buildQuestHeatmap, dayKey, nextResetAt } from "./calendar";
 
 describe("quest calendar", () => {
   it("uses Vietnam day keys", () => {
@@ -31,5 +31,18 @@ describe("quest calendar", () => {
     expect(year).toHaveLength(12);
     expect(year.at(-1)?.count).toBe(3);
     expect(year.find((p) => p.key === "2026-07")?.count).toBe(1);
+  });
+
+  it("builds a GitHub-style 53-week heatmap", () => {
+    const now = new Date("2026-08-11T10:00:00+07:00");
+    const { weeks, total } = buildQuestHeatmap(
+      [{ dayKey: "2026-08-11" }, { dayKey: "2026-08-11" }, { dayKey: "2026-08-10" }],
+      now,
+    );
+    expect(weeks).toHaveLength(53);
+    expect(weeks[0]?.days).toHaveLength(7);
+    expect(total).toBe(3);
+    const today = weeks.at(-1)?.days.find((d) => d.key === "2026-08-11");
+    expect(today?.count).toBe(2);
   });
 });

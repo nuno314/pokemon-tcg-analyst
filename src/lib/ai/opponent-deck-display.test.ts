@@ -37,22 +37,23 @@ zyfggotg's Genesect ex was Knocked Out!
 `.trim();
     const opp = resolveOpponentDeckDisplay(log, "zyfggotg");
     expect(opp.name).not.toBe("Dragapult ex");
-    expect(opp.name).toMatch(/Genesect|Beldum/i);
+    expect(opp.name).toBe("Metagross (Metal Maker)");
+    expect(opp.isMeta).toBe(true);
   });
 
   it("uses last opponent KO pokemon when meta unknown", () => {
     const log = `
 p1 played Ralts.
-p2 played Beldum.
-p2 evolved Beldum to Metang.
-p1's Gardevoir ex used attack on p2's Metang for 100 damage.
-p2's Metang was Knocked Out!
-p2's Metagross ex was Knocked Out!
+p2 played Absol.
+p1's Gardevoir ex used attack on p2's Absol for 100 damage.
+p2's Absol was Knocked Out!
+p2's Mega Absol ex was Knocked Out!
 `.trim();
-    expect(extractLastOpponentKoPokemon(log, "p2")).toBe("Metagross ex");
+    expect(extractLastOpponentKoPokemon(log, "p2")).toBe("Mega Absol ex");
     const opp = resolveOpponentDeckDisplay(log, "p2");
-    expect(opp.name).toBe("Metagross ex");
-    expect(opp.iconIds[0]).toBe(376);
+    expect(opp.name).toBe("Mega Absol ex");
+    expect(opp.iconIds[0]).toBe(359);
+    expect(opp.isMeta).toBe(false);
   });
 
   it("parses sample battle log without Dragapult false positive", () => {
@@ -61,7 +62,8 @@ p2's Metagross ex was Knocked Out!
     expect(cards.some((c) => /dragapult|dreepy|drakloak/i.test(c))).toBe(false);
     const opp = resolveOpponentDeckDisplay(raw, "zyfggotg");
     expect(opp.name).not.toBe("Dragapult ex");
-    expect(opp.name).toMatch(/Genesect|Beldum/i);
+    expect(opp.name).toBe("Metagross (Metal Maker)");
+    expect(opp.isMeta).toBe(true);
   });
 
   it("detects Festival Lead from opponent played cards", () => {

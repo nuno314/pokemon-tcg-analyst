@@ -51,7 +51,15 @@ describe("meta-decks", () => {
     expect(notes.mistakes.some((m) => /Phantom Dive/i.test(m))).toBe(true);
   });
 
-  it("has 12 meta entries", () => {
-    expect(META_DECKS).toHaveLength(12);
+  it("has 24 meta entries", () => {
+    expect(META_DECKS).toHaveLength(24);
+  });
+
+  it("Metal Maker notes target Metang not Active Metagross", () => {
+    const deck = META_DECKS.find((d) => d.id === "metagross")!;
+    expect(deck.priorityTarget).toMatch(/Metang/i);
+    const notes = metaMatchupNotes(deck, { wentFirstMe: true, result: "loss" });
+    expect(notes.opponentNotes.some((n) => /Target ưu tiên/i.test(n))).toBe(true);
+    expect(notes.tips.some((t) => /prize map/i.test(t))).toBe(true);
   });
 });

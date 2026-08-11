@@ -14,6 +14,7 @@ export function AppNav({ ptcglName }: { ptcglName?: string | null }) {
     { href: "/dashboard", label: dict.nav.dashboard },
     { href: "/decks", label: dict.nav.decks },
     { href: "/matches/import", label: dict.nav.import },
+    { href: "/settings", label: dict.nav.settings },
   ];
 
   async function signOut() {
@@ -61,7 +62,15 @@ export function AppNav({ ptcglName }: { ptcglName?: string | null }) {
           })}
         </nav>
         <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
-          {ptcglName ? <span className="hidden sm:inline font-semibold">{ptcglName}</span> : null}
+          {ptcglName ? (
+            <Link
+              href="/settings"
+              className="hidden sm:inline font-semibold text-[var(--ink)] hover:text-[var(--accent)] hover:underline"
+              title={dict.nav.settings}
+            >
+              {ptcglName}
+            </Link>
+          ) : null}
           <ThemeToggle />
           <button
             type="button"

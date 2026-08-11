@@ -75,7 +75,13 @@ export default async function DashboardPage({
           <div>
             <h1 className="font-display text-3xl text-[var(--ink)]">{dict.dashboard.title}</h1>
             <p className="text-sm text-[var(--muted)]">
-              {dict.dashboard.playingAs} {profile.ptcglName}
+              {dict.dashboard.playingAs}{" "}
+              <Link
+                href="/settings"
+                className="font-semibold text-[var(--ink)] hover:text-[var(--accent)] hover:underline"
+              >
+                {profile.ptcglName}
+              </Link>
             </p>
           </div>
           <div className="flex gap-2 text-sm">

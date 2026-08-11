@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/session";
-import { upsertProfile } from "@/lib/db/queries";
+import { repairUserMatches, upsertProfile } from "@/lib/db/queries";
 
 export async function POST(request: Request) {
   try {
@@ -11,8 +11,13 @@ export async function POST(request: Request) {
     if (!ptcglName) {
       return NextResponse.json({ error: "PTCGL name is required" }, { status: 400 });
     }
-    await upsertProfile(authz.session.user.id, ptcglName);
-    return NextResponse.json({ ok: true });
+    if (ptcglName.length > 40) {
+      return NextResponse.json({ error: "PTCGL name is too long" }, { status: 400 });
+    }
+    const userId = authz.session.user.id;
+    await upsertProfile(userId, ptcglName);
+    const repaired = await repairUserMatches(userId, ptcglName);
+    return NextResponse.json({ ok: true, repaired });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Failed" },

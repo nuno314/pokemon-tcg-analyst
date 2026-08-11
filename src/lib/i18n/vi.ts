@@ -4,6 +4,7 @@ export const vi = {
     dashboard: "Tổng quan",
     decks: "Deck",
     import: "Import",
+    settings: "Hồ sơ",
     signOut: "Đăng xuất",
   },
   home: {
@@ -29,8 +30,18 @@ export const vi = {
     title: "Tên PTCGL của bạn",
     hint: "Nhập đúng display name trên Pokémon TCG Live để nhận diện thắng/thua trong log.",
     label: "Tên hiển thị PTCGL",
-    continue: "Tiếp tục",
+    submit: "Tiếp tục",
     saving: "Đang lưu…",
+  },
+  settings: {
+    pageTitle: "Hồ sơ",
+    pageHint: "Sửa tên PTCGL nếu lúc đầu nhập nhầm — phải khớp username trong battle log.",
+    title: "Sửa tên PTCGL",
+    hint: "Tên phải giống hệt display name trên Pokémon TCG Live. Sau khi lưu, các trận cũ sẽ được khớp lại thắng/thua.",
+    label: "Tên hiển thị PTCGL",
+    submit: "Lưu tên",
+    saving: "Đang lưu…",
+    saved: "Đã lưu. Trận cũ đã được cập nhật theo tên mới.",
   },
   dashboard: {
     title: "Tổng quan",

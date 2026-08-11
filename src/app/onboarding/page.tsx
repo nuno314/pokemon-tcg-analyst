@@ -1,4 +1,4 @@
-import { OnboardingForm } from "@/components/OnboardingForm";
+import { ProfileNameForm } from "@/components/ProfileNameForm";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { getProfile, requireSession } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <OnboardingForm />
+      <ProfileNameForm mode="onboarding" />
     </main>
   );
 }

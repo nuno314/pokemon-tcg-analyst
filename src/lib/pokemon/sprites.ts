@@ -40,6 +40,7 @@ const CARD_TO_DEX: Record<string, number> = {
   dudunsparce: 982,
   poltchageist: 1012,
   sinistcha: 1013,
+  spiritomb: 442,
   "n's zoroark ex": 571,
   "n's zoroark": 571,
   "n's zorua": 570,

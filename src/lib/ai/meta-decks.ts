@@ -26,7 +26,8 @@ export type MetaDeckId =
   | "mega_greninja"
   | "ogerpon_meganium"
   | "sylveon"
-  | "archaludon";
+  | "archaludon"
+  | "hide_n_sneak";
 
 export type MetaLogSignal = {
   pattern: RegExp;
@@ -690,6 +691,37 @@ export const META_DECKS: MetaDeckGuide[] = [
     priorityTarget: "Duraludon trước evolve; support (Munkidori/Fez/Relicanth) nếu tank đã Cape",
     trap: "Chip Archaludon + Black Belt + Hero's Cape = feed prize. Không OHKO thì đổi target.",
   },
+  {
+    id: "hide_n_sneak",
+    name: "Hide 'n' Sneak (Banette / Dhelmise)",
+    share: "meta",
+    keywords:
+      /hide ['’]?n['’]? sneak|puppet pull|vengeful anchor|matcha spin|banette|shuppet|dhelmise|sinistcha|poltchageist|spiritomb|gwynn|prism tower/i,
+    engine:
+      "Không giữ Hide 'n' Sneak trên field — discard Banette/Sinistcha/line (Gwynn, Prism Tower, Dudunsparce) để scale Dhelmise/Sinistcha và Spiritomb late. Early Banette Puppet Pull = 80 + search + bait KO vào discard.",
+    plan: "Bait KO Shuppet/Banette → fill discard → Dhelmise/Sinistcha scale → Spiritomb finisher khi bin đủ dày.",
+    keyCards: ["Banette", "Shuppet", "Dhelmise", "Sinistcha", "Poltchageist", "Spiritomb", "Hide 'n' Sneak"],
+    iconIds: [354, 781],
+    logSignals: [
+      {
+        pattern: /puppet pull|vengeful anchor|matcha spin|hide ['’]?n['’]? sneak/i,
+        tip: "Hide 'n' Sneak: đếm discard của họ — đừng free KO Banette/Shuppet nếu chưa có plan. Chip/snipe vào setup trống thường mất value (damage vanish).",
+        onLoss: true,
+      },
+    ],
+    counters: [
+      "Đừng auto KO early Banette/Shuppet — họ muốn bài vào discard. Trap Active yếu hoặc ép trade xấu.",
+      "Pressure Dhelmise/Sinistcha trước khi discard count max; Boss attacker đang scale.",
+      "Respect Spiritomb late nếu bin đầy Hide 'n' Sneak — prize race trước finisher.",
+      "Munkidori/spread vào board trống kém hiệu quả — target Pokémon họ còn cần trên field (Dudunsparce/engine) nếu gust được.",
+      "Disrupt discard engine (Gwynn / Prism Tower / draw loop) sớm hơn chase Active bait.",
+    ],
+    watch: ["Discard Hide 'n' Sneak count", "Puppet Pull bait", "Dhelmise Vengeful Anchor", "Spiritomb late", "Gwynn/Prism Tower"],
+    ifGoingFirst: "Đừng feed Banette vào bin miễn phí; identify Dhelmise/Sinistcha line.",
+    ifGoingSecond: "Boss Dhelmise đang scale; đếm discard trước khi trade prize.",
+    priorityTarget: "Dhelmise / Sinistcha đang attack — không free KO Shuppet/Banette bait",
+    trap: "KO Banette sớm = giúp họ discard scale. Damage vào board họ đã 'ẩn' thường phí Munkidori/snipe.",
+  },
 ];
 
 /** Ưu tiên deck cụ thể hơn (Festival Lead trước Hydrapple vì cùng Dipplin). */
@@ -709,6 +741,7 @@ const DETECT_ORDER: MetaDeckId[] = [
   "sylveon",
   "hydrapple",
   "ogerpon_meganium",
+  "hide_n_sneak",
   "dragapult",
   "zoroark",
   "crustle",
@@ -757,6 +790,20 @@ export const META_PRIMARY_CARDS: Record<MetaDeckId, string[]> = {
   ogerpon_meganium: ["Chikorita", "Bayleef", "Meganium"],
   sylveon: ["Sylveon"],
   archaludon: ["Archaludon", "Duraludon"],
+  hide_n_sneak: [
+    "Banette",
+    "Shuppet",
+    "Dhelmise",
+    "Sinistcha",
+    "Poltchageist",
+    "Spiritomb",
+    "Hide 'n' Sneak",
+    "Puppet Pull",
+    "Vengeful Anchor",
+    "Matcha Spin",
+    "Gwynn",
+    "Prism Tower",
+  ],
 };
 
 export function cardMatchesPrimaryName(card: string, primary: string): boolean {

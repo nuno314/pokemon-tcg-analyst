@@ -51,8 +51,8 @@ describe("meta-decks", () => {
     expect(notes.mistakes.some((m) => /Phantom Dive/i.test(m))).toBe(true);
   });
 
-  it("has 24 meta entries", () => {
-    expect(META_DECKS).toHaveLength(24);
+  it("has 25 meta entries", () => {
+    expect(META_DECKS).toHaveLength(25);
   });
 
   it("Metal Maker notes target Metang not Active Metagross", () => {

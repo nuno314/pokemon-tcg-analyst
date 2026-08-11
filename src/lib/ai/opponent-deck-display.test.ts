@@ -93,8 +93,8 @@ p2's Mega Absol ex was Knocked Out!
     const opp = resolveOpponentDeckDisplay(raw, "pharaon92");
     expect(opp.name).not.toMatch(/Alakazam/i);
     expect(opp.name).not.toMatch(/Dragapult/i);
-    expect(opp.name).toBe("Dhelmise");
-    expect(opp.iconIds[0]).toBe(781);
-    expect(opp.isMeta).toBe(false);
+    expect(opp.name).toBe("Hide 'n' Sneak (Banette / Dhelmise)");
+    expect(opp.isMeta).toBe(true);
+    expect(opp.iconIds.some((id) => id === 354 || id === 781 || id === 1013)).toBe(true);
   });
 });

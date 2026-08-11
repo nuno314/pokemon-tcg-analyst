@@ -3,7 +3,7 @@ import { detectMetaDeckFromCards } from "./meta-decks";
 
 describe("detectMetaDeckFromCards", () => {
   it("requires Alakazam core — not Dudunsparce alone", () => {
-    expect(detectMetaDeckFromCards(["Dudunsparce", "Dunsparce", "Banette"])).toBeNull();
+    expect(detectMetaDeckFromCards(["Dudunsparce", "Dunsparce"])).toBeNull();
   });
 
   it("matches Dragapult only with line core", () => {
@@ -53,5 +53,12 @@ describe("detectMetaDeckFromCards", () => {
     expect(detectMetaDeckFromCards(["Eevee"])).toBeNull();
     expect(detectMetaDeckFromCards(["Duraludon", "Archaludon ex"])?.id).toBe("archaludon");
     expect(detectMetaDeckFromCards(["Black Belt's Training"])).toBeNull();
+  });
+
+  it("detects Hide 'n' Sneak from Banette/Dhelmise, not Dudunsparce alone", () => {
+    expect(detectMetaDeckFromCards(["Dudunsparce", "Dunsparce"])).toBeNull();
+    expect(detectMetaDeckFromCards(["Banette", "Dhelmise"])?.id).toBe("hide_n_sneak");
+    expect(detectMetaDeckFromCards(["Sinistcha", "Poltchageist"])?.id).toBe("hide_n_sneak");
+    expect(detectMetaDeckFromCards(["Spiritomb"])?.id).toBe("hide_n_sneak");
   });
 });

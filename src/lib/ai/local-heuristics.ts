@@ -99,7 +99,8 @@ function guessArchetype(cards: string[], opponentName: string, rawLog: string): 
   if (/lost (box|zone)|comfey|mirror box/.test(blob)) return "Lost Box";
   if (/miraidon|regieleki|iron hands|future/.test(blob)) return "Future box";
   if (/terapagos|area zero/.test(blob)) return "Terapagos";
-  if (/banette|shuppet|dhelmise|sinistcha|poltchageist/.test(blob)) return "Banette / Dhelmise box";
+  if (/banette|shuppet|dhelmise|sinistcha|poltchageist|spiritomb|hide ['’]?n['’]? sneak/i.test(blob))
+    return "Hide 'n' Sneak (Banette / Dhelmise)";
   if (cards.length >= 2) return `Line: ${cards.slice(0, 2).join(", ")}`;
   return "Archetype chưa rõ (log ít tên bài)";
 }

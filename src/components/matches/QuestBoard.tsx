@@ -1,14 +1,23 @@
 import Link from "next/link";
+import type { QuestChartPoint } from "@/lib/quests/calendar";
 import type { QuestBoardData } from "@/lib/quests/generate";
+import { QuestProgressChart } from "@/components/matches/QuestProgressChart";
+import { QuestResetCountdown } from "@/components/matches/QuestResetCountdown";
 
-export function QuestBoard({ board }: { board: QuestBoardData }) {
+export function QuestBoard({
+  board,
+  charts,
+}: {
+  board: QuestBoardData;
+  charts: { week: QuestChartPoint[]; month: QuestChartPoint[]; year: QuestChartPoint[] };
+}) {
   if (!board.unlocked) {
     return (
       <section className="ui-card p-5">
         <h2 className="font-display text-xl text-[var(--ink)]">Quest luyện tập</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Cần ít nhất {board.need} trận để mở quest & note. Hiện có {board.matchCount}/
-          {board.need}.
+          Cần ít nhất {board.need} trận để mở quest ngày. Hiện có {board.matchCount}/
+          {board.need}. Reset 00:00 GMT+7.
         </p>
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--wash)]">
           <div
@@ -26,15 +35,17 @@ export function QuestBoard({ board }: { board: QuestBoardData }) {
     <section className="ui-card space-y-4 p-5">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="font-display text-xl text-[var(--ink)]">Quest luyện tập</h2>
+          <h2 className="font-display text-xl text-[var(--ink)]">Quest luyện tập hôm nay</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Tự sinh từ data của bạn · {board.completedCount} quest đã đủ điều kiện · làm bằng
-            cách import / phân tích trận.
+            Hết hạn 00:00 GMT+7 · {board.completedCount}/{board.dailyTarget} quest trong ngày
           </p>
         </div>
-        <Link href="/matches/import" className="text-sm text-[var(--accent)] hover:underline">
-          Import log
-        </Link>
+        <div className="flex items-center gap-2">
+          <QuestResetCountdown resetsAt={board.resetsAt} />
+          <Link href="/matches/import" className="text-sm text-[var(--accent)] hover:underline">
+            Import log
+          </Link>
+        </div>
       </div>
 
       {board.notes.length > 0 ? (
@@ -85,6 +96,8 @@ export function QuestBoard({ board }: { board: QuestBoardData }) {
           </li>
         ))}
       </ul>
+
+      <QuestProgressChart week={charts.week} month={charts.month} year={charts.year} />
     </section>
   );
 }

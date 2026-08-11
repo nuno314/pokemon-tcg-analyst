@@ -145,4 +145,14 @@ CREATE TABLE IF NOT EXISTS player_assessments (
   created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
   updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
 );
+
+CREATE TABLE IF NOT EXISTS quest_completions (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  quest_id TEXT NOT NULL,
+  day_key TEXT NOT NULL,
+  completed_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
+CREATE INDEX IF NOT EXISTS quest_completions_userId_dayKey_idx ON quest_completions(user_id, day_key);
+CREATE UNIQUE INDEX IF NOT EXISTS quest_completions_userId_dayKey_questId_uidx ON quest_completions(user_id, day_key, quest_id);
 `;

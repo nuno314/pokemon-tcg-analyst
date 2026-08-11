@@ -208,6 +208,25 @@ export const playerAssessments = sqliteTable("player_assessments", {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
 });
 
+export const questCompletions = sqliteTable(
+  "quest_completions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    questId: text("quest_id").notNull(),
+    dayKey: text("day_key").notNull(),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+  },
+  (t) => [
+    index("quest_completions_userId_dayKey_idx").on(t.userId, t.dayKey),
+    uniqueIndex("quest_completions_userId_dayKey_questId_uidx").on(t.userId, t.dayKey, t.questId),
+  ],
+);
+
 export const decksRelations = relations(decks, ({ many, one }) => ({
   cards: many(deckCards),
   matches: many(matches),

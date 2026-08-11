@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "./index";
-import { deckCards, decks, matchAnalyses, matchEvents, matches, matchTurns, playerAssessments, profiles } from "./schema";
+import { deckCards, decks, matchAnalyses, matchEvents, matches, matchTurns, playerAssessments, profiles, questCompletions } from "./schema";
 import { parseDeckList } from "../parser/deck-list";
 import { parseBattleLog, resolveMatchResult } from "../parser/ptcgl-log";
 import type { MatchAnalysisResult, PlayerAssessmentResult } from "../ai/analyze";
@@ -471,6 +471,52 @@ export async function countUserAnalyses(userId: string) {
     .from(matchAnalyses)
     .where(eq(matchAnalyses.userId, userId));
   return Number(rows[0]?.count ?? 0);
+}
+
+export async function countUserAnalysesSince(userId: string, since: Date) {
+  const rows = await db
+    .select({ count: sql<number>`cast(count(*) as integer)` })
+    .from(matchAnalyses)
+    .where(and(eq(matchAnalyses.userId, userId), gte(matchAnalyses.createdAt, since)));
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function listQuestCompletions(userId: string) {
+  return db
+    .select({
+      questId: questCompletions.questId,
+      dayKey: questCompletions.dayKey,
+      completedAt: questCompletions.completedAt,
+    })
+    .from(questCompletions)
+    .where(eq(questCompletions.userId, userId))
+    .orderBy(desc(questCompletions.completedAt));
+}
+
+export async function recordDailyQuestCompletions(
+  userId: string,
+  day: string,
+  questIds: string[],
+) {
+  if (questIds.length === 0) return;
+  await db
+    .insert(questCompletions)
+    .values(
+      questIds.map((questId) => ({
+        id: randomUUID(),
+        userId,
+        questId,
+        dayKey: day,
+      })),
+    )
+    .onConflictDoNothing({
+      target: [questCompletions.userId, questCompletions.dayKey, questCompletions.questId],
+    });
+}
+
+export async function syncQuestCompletions(userId: string, day: string, doneQuestIds: string[]) {
+  await recordDailyQuestCompletions(userId, day, doneQuestIds);
+  return listQuestCompletions(userId);
 }
 
 export function parseJsonStringArray(raw: string | null | undefined): string[] {

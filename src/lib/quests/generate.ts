@@ -1,4 +1,5 @@
 import { PLAYER_ASSESSMENT_MIN_MATCHES } from "@/lib/i18n/vi";
+import { dayKey, dayStartUtc, nextResetAt, QUEST_TZ_OFFSET_MINUTES } from "./calendar";
 
 export type QuestMatch = {
   id: string;
@@ -7,6 +8,7 @@ export type QuestMatch = {
   wentFirst: string | null;
   deckId: string | null;
   opponentName: string;
+  importedAt?: Date | null;
 };
 
 export type QuestItem = {
@@ -31,6 +33,9 @@ export type QuestBoardData = {
   quests: QuestItem[];
   notes: CoachNote[];
   completedCount: number;
+  dayKey: string;
+  resetsAt: string;
+  dailyTarget: number;
 };
 
 function isMe(wentFirst: string | null, ptcglName: string) {
@@ -43,7 +48,6 @@ function countWhere(matches: QuestMatch[], pred: (m: QuestMatch) => boolean) {
 }
 
 function hasWinStreak(matches: QuestMatch[], len: number) {
-  // matches expected newest-first
   let streak = 0;
   for (const m of [...matches].reverse()) {
     if (m.result === "win") {
@@ -56,18 +60,48 @@ function hasWinStreak(matches: QuestMatch[], len: number) {
   return false;
 }
 
-/** Sinh quest + note local từ lịch sử trận (không OpenAI). */
+function hashDay(key: string) {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i += 1) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function pickDailyIds(day: string, pool: string[], count: number) {
+  const ids = [...pool];
+  let seed = hashDay(day);
+  for (let i = ids.length - 1; i > 0; i -= 1) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const j = seed % (i + 1);
+    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+  }
+  return ids.slice(0, count);
+}
+
+function inToday(m: QuestMatch, start: Date) {
+  if (!m.importedAt) return false;
+  return m.importedAt.getTime() >= start.getTime();
+}
+
+/** Sinh quest ngày (reset 00:00 GMT+7) từ trận hôm nay. */
 export function generateQuestBoard(input: {
   ptcglName: string;
   matchCount: number;
   matches: QuestMatch[];
   analysisCount: number;
   deckCount: number;
+  now?: Date;
 }): QuestBoardData {
   const need = PLAYER_ASSESSMENT_MIN_MATCHES;
   const unlocked = input.matchCount >= need;
   const me = input.ptcglName;
-  const matches = input.matches;
+  const now = input.now ?? new Date();
+  const todayKey = dayKey(now, QUEST_TZ_OFFSET_MINUTES);
+  const start = dayStartUtc(todayKey, QUEST_TZ_OFFSET_MINUTES);
+  const resetsAt = nextResetAt(now, QUEST_TZ_OFFSET_MINUTES).toISOString();
+  const matches = input.matches.filter((m) => inToday(m, start));
 
   const winFirst = countWhere(
     matches,
@@ -86,140 +120,122 @@ export function generateQuestBoard(input: {
     (m) => m.result === "win" && (m.resultReason === "standard" || m.resultReason === "win"),
   );
   const withDeck = countWhere(matches, (m) => Boolean(m.deckId));
-  const winDecks = new Set(
-    matches.filter((m) => m.result === "win" && m.deckId).map((m) => m.deckId as string),
-  );
+  const wins = countWhere(matches, (m) => m.result === "win");
+  const imports = matches.length;
 
-  const candidates: (QuestItem & { weight: number })[] = [
-    {
+  const pool: Record<string, QuestItem> = {
+    win_today: {
+      id: "win_today",
+      title: "Thắng 1 trận hôm nay",
+      detail: "Import 1 trận thắng trong ngày.",
+      href: "/matches/import",
+      progress: Math.min(1, wins),
+      target: 1,
+      done: wins >= 1,
+    },
+    import_two: {
+      id: "import_two",
+      title: "Import 2 trận hôm nay",
+      detail: "Ghi lại 2 trận trong ngày để quest và win rate cập nhật.",
+      href: "/matches/import",
+      progress: Math.min(2, imports),
+      target: 2,
+      done: imports >= 2,
+    },
+    win_first: {
       id: "win_first",
       title: "Thắng khi đi trước",
-      detail: "Import 1 trận thắng mà bạn là người đi trước.",
+      detail: "Hôm nay thắng 1 trận mà bạn đi trước.",
       href: "/matches/import",
       progress: Math.min(1, winFirst),
       target: 1,
       done: winFirst >= 1,
-      weight: winFirst >= 1 ? 0 : 40,
     },
-    {
+    win_second: {
       id: "win_second",
       title: "Thắng khi đi sau",
-      detail: "Import 1 trận thắng khi đối thủ đi trước (bạn đi sau).",
+      detail: "Hôm nay thắng 1 trận khi đối thủ đi trước.",
       href: "/matches/import",
       progress: Math.min(1, winSecond),
       target: 1,
       done: winSecond >= 1,
-      weight: winSecond >= 1 ? 0 : 45,
     },
-    {
+    win_concede: {
       id: "win_concede",
       title: "Thắng nhờ concede",
-      detail: "Import 1 trận thắng khi đối thủ concede / bỏ cuộc.",
+      detail: "Import 1 trận thắng khi đối thủ concede hôm nay.",
       href: "/matches/import",
       progress: Math.min(1, winConcede),
       target: 1,
       done: winConcede >= 1,
-      weight: winConcede >= 1 ? 0 : 35,
     },
-    {
+    win_standard: {
       id: "win_standard",
       title: "Thắng kết thúc chuẩn",
-      detail: "Import 1 trận thắng bằng KO / lấy hết prize (không phải concede).",
+      detail: "Hôm nay thắng bằng KO / lấy hết prize (không concede).",
       href: "/matches/import",
       progress: Math.min(1, winStandard),
       target: 1,
       done: winStandard >= 1,
-      weight: winStandard >= 1 ? 0 : 35,
     },
-    {
+    attach_deck: {
       id: "attach_deck",
       title: "Gắn deck khi import",
-      detail: "Import 3 trận có chọn deck đã dùng — để win rate theo deck chính xác.",
+      detail: "Import 1 trận hôm nay có chọn deck đã dùng.",
       href: "/matches/import",
-      progress: Math.min(3, withDeck),
-      target: 3,
-      done: withDeck >= 3,
-      weight: withDeck >= 3 ? 0 : 30,
+      progress: Math.min(1, withDeck),
+      target: 1,
+      done: withDeck >= 1,
     },
-    {
+    analyze_one: {
       id: "analyze_one",
-      title: "Chạy AI Analyst 1 trận",
-      detail: "Mở 1 trận bất kỳ và bấm AI Analyst.",
-      href: matches[0] ? `/matches/${matches[0].id}` : "/dashboard",
+      title: "Chạy AI Analyst hôm nay",
+      detail: "Mở 1 trận và bấm AI Analyst trong ngày.",
+      href: input.matches[0] ? `/matches/${input.matches[0].id}` : "/dashboard",
       progress: Math.min(1, input.analysisCount),
       target: 1,
       done: input.analysisCount >= 1,
-      weight: input.analysisCount >= 1 ? 0 : 50,
     },
-    {
+    win_streak_2: {
       id: "win_streak_2",
       title: "Chuỗi 2 trận thắng",
-      detail: "Import để có 2 trận thắng liên tiếp trong lịch sử.",
+      detail: "Hôm nay import 2 trận thắng liên tiếp.",
       href: "/matches/import",
       progress: hasWinStreak(matches, 2) ? 1 : 0,
       target: 1,
       done: hasWinStreak(matches, 2),
-      weight: hasWinStreak(matches, 2) ? 0 : 25,
     },
-    {
-      id: "win_two_decks",
-      title: "Thắng với 2 deck",
-      detail:
-        input.deckCount < 2
-          ? "Tạo thêm deck rồi import trận thắng cho ít nhất 2 list."
-          : "Import trận thắng gắn với 2 deck khác nhau.",
-      href: input.deckCount < 2 ? "/decks/new" : "/matches/import",
-      progress: Math.min(2, winDecks.size),
-      target: 2,
-      done: winDecks.size >= 2,
-      weight: winDecks.size >= 2 ? 0 : 28,
-    },
-  ];
+  };
 
-  // Prefer incomplete high-weight, then fill with completed for progress feel
-  const incomplete = candidates
-    .filter((q) => !q.done)
-    .sort((a, b) => b.weight - a.weight);
-  const complete = candidates.filter((q) => q.done);
-  const picked = [...incomplete.slice(0, 4), ...complete.slice(0, Math.max(0, 4 - incomplete.length))].slice(
-    0,
-    4,
-  );
+  const dailyIds = pickDailyIds(todayKey, Object.keys(pool), 4);
+  const quests = dailyIds.map((id) => pool[id]!);
+  const completedCount = quests.filter((q) => q.done).length;
 
   const notes: CoachNote[] = [];
-  if (winSecond === 0) {
+  if (!unlocked) {
     notes.push({
-      id: "note_second",
-      text: "Chưa có sample thắng đi sau — thêm vài trận kiểu này giúp đánh giá ổn định hơn.",
+      id: "note_lock",
+      text: `Cần ${need} trận tổng để mở quest ngày. Quest reset 00:00 GMT+7.`,
     });
-  }
-  if (winFirst === 0) {
+  } else if (completedCount === quests.length) {
     notes.push({
-      id: "note_first",
-      text: "Chưa có sample thắng đi trước — import để so sánh first/second cho công bằng.",
+      id: "note_done",
+      text: "Xong hết quest hôm nay — mai reset bộ mới lúc 00:00 GMT+7.",
     });
-  }
-  if (winConcede === 0 && winStandard === 0) {
+  } else if (imports === 0) {
     notes.push({
-      id: "note_end",
-      text: "Hãy đa dạng cách thắng (concede vs KO/prize) để quest và phân tích phong phú hơn.",
+      id: "note_import",
+      text: "Chưa có trận nào hôm nay — import log để làm quest trong ngày.",
     });
-  } else if (withDeck < Math.min(3, matches.length)) {
+  } else if (input.deckCount < 1) {
     notes.push({
       id: "note_deck",
-      text: "Nhiều trận chưa gắn deck — gắn list khi import để win rate theo deck đúng.",
+      text: "Tạo deck rồi gắn khi import để quest gắn deck và win rate theo list đúng.",
     });
-  }
-  if (input.analysisCount === 0 && matches.length > 0) {
+  } else {
     notes.push({
-      id: "note_ai",
-      text: "Thử AI Analyst trên 1 trận gần đây (Boss timing, prize race…).",
-    });
-  }
-  if (notes.length === 0) {
-    notes.push({
-      id: "note_good",
-      text: "Data đã đa dạng khá tốt — tiếp tục import đều và làm quest còn lại.",
+      id: "note_go",
+      text: `Còn ${quests.length - completedCount}/${quests.length} quest hôm nay. Hết hạn lúc 00:00 GMT+7.`,
     });
   }
 
@@ -227,8 +243,11 @@ export function generateQuestBoard(input: {
     unlocked,
     matchCount: input.matchCount,
     need,
-    quests: picked.map(({ weight: _w, ...q }) => q),
+    quests,
     notes: notes.slice(0, 2),
-    completedCount: candidates.filter((q) => q.done).length,
+    completedCount,
+    dayKey: todayKey,
+    resetsAt,
+    dailyTarget: quests.length,
   };
 }

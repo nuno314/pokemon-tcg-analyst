@@ -64,7 +64,7 @@ export default async function DashboardPage({
         questBoard.quests.filter((q) => q.done).map((q) => q.id),
       )
     : [];
-  const questHeatmap = buildQuestHeatmap(completions, now).weeks;
+  const questHeatmap = buildQuestHeatmap(completions, now);
   const matchListItems = enrichMatchListItems(matches, deckName);
 
   return (
@@ -126,7 +126,7 @@ export default async function DashboardPage({
 
             <PlayerStyleCard matchCount={matchCount} initial={assessment} />
 
-            <QuestBoard board={questBoard} heatmap={questHeatmap} />
+            <QuestBoard board={questBoard} heatmap={questHeatmap.weeks} year={questHeatmap.year} />
 
             <section className="space-y-3">
               <div className="flex items-center justify-between">

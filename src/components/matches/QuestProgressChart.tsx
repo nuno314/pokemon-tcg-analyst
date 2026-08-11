@@ -11,7 +11,13 @@ function cellClass(count: number, empty: boolean) {
   return "bg-[color-mix(in_srgb,var(--accent)_40%,#9b1d5a)]";
 }
 
-export function QuestProgressChart({ weeks }: { weeks: QuestHeatmapWeek[] }) {
+export function QuestProgressChart({
+  weeks,
+  year,
+}: {
+  weeks: QuestHeatmapWeek[];
+  year: number;
+}) {
   const total = weeks.reduce(
     (sum, w) => sum + w.days.reduce((s, d) => s + (d.empty ? 0 : d.count), 0),
     0,
@@ -20,7 +26,7 @@ export function QuestProgressChart({ weeks }: { weeks: QuestHeatmapWeek[] }) {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--wash)] p-3">
       <p className="mb-2 text-sm font-medium text-[var(--ink)]">
-        {total} quest hoàn thành trong năm qua
+        {total} quest hoàn thành năm {year}
       </p>
 
       <div

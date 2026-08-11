@@ -71,7 +71,7 @@ function formatMonthLabel(key: string) {
 export type QuestHeatmapDay = {
   key: string;
   count: number;
-  /** Placeholder before the 12-month window starts. */
+  /** Outside the calendar year, or after today. */
   empty: boolean;
 };
 
@@ -87,22 +87,29 @@ function weekdaySun0(key: string, offsetMinutes = QUEST_TZ_OFFSET_MINUTES) {
   return shifted.getUTCDay();
 }
 
-/** GitHub-style 53-week grid (Sun–Sat columns), ending today. */
+/** Calendar-year grid Th1→Th12 (Sun–Sat columns), padded to full weeks. */
 export function buildQuestHeatmap(
   completions: { dayKey: string }[],
   now: Date,
-  weekCount = 53,
   offsetMinutes = QUEST_TZ_OFFSET_MINUTES,
-): { weeks: QuestHeatmapWeek[]; total: number } {
+): { weeks: QuestHeatmapWeek[]; total: number; year: number } {
+  const { year } = zonedParts(now, offsetMinutes);
   const today = dayKey(now, offsetMinutes);
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
   const counts = new Map<string, number>();
   for (const row of completions) {
     counts.set(row.dayKey, (counts.get(row.dayKey) ?? 0) + 1);
   }
 
-  const todayWd = weekdaySun0(today, offsetMinutes);
-  const daysBack = (weekCount - 1) * 7 + todayWd;
-  const gridStart = addDays(today, -daysBack, offsetMinutes);
+  const gridStart = addDays(yearStart, -weekdaySun0(yearStart, offsetMinutes), offsetMinutes);
+  const endWd = weekdaySun0(yearEnd, offsetMinutes);
+  const gridEnd = addDays(yearEnd, 6 - endWd, offsetMinutes);
+  const weekCount = Math.round(
+    (dayStartUtc(gridEnd, offsetMinutes).getTime() -
+      dayStartUtc(gridStart, offsetMinutes).getTime()) /
+      (7 * 24 * 60 * 60 * 1000),
+  ) + 1;
 
   const weeks: QuestHeatmapWeek[] = [];
   let prevMonth = 0;
@@ -113,12 +120,14 @@ export function buildQuestHeatmap(
     let monthLabel: string | null = null;
     for (let d = 0; d < 7; d += 1) {
       const key = addDays(gridStart, w * 7 + d, offsetMinutes);
+      const inYear = key >= yearStart && key <= yearEnd;
       const afterToday = key > today;
-      const count = afterToday ? 0 : (counts.get(key) ?? 0);
-      if (!afterToday) total += count;
-      days.push({ key, count, empty: afterToday });
+      const empty = !inYear || afterToday;
+      const count = empty ? 0 : (counts.get(key) ?? 0);
+      if (!empty) total += count;
+      days.push({ key, count, empty });
       const month = Number(key.slice(5, 7));
-      if (!afterToday && month !== prevMonth) {
+      if (inYear && month !== prevMonth) {
         monthLabel = MONTH_LABELS[month - 1] ?? null;
         prevMonth = month;
       }
@@ -126,7 +135,7 @@ export function buildQuestHeatmap(
     weeks.push({ monthLabel, days });
   }
 
-  return { weeks, total };
+  return { weeks, total, year };
 }
 
 export function buildQuestChart(

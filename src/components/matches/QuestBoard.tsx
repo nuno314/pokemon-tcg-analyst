@@ -7,9 +7,11 @@ import { QuestResetCountdown } from "@/components/matches/QuestResetCountdown";
 export function QuestBoard({
   board,
   heatmap,
+  year,
 }: {
   board: QuestBoardData;
   heatmap: QuestHeatmapWeek[];
+  year: number;
 }) {
   if (!board.unlocked) {
     return (
@@ -97,7 +99,7 @@ export function QuestBoard({
         ))}
       </ul>
 
-      <QuestProgressChart weeks={heatmap} />
+      <QuestProgressChart weeks={heatmap} year={year} />
     </section>
   );
 }

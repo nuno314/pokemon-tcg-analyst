@@ -33,16 +33,30 @@ describe("quest calendar", () => {
     expect(year.find((p) => p.key === "2026-07")?.count).toBe(1);
   });
 
-  it("builds a GitHub-style 53-week heatmap", () => {
+  it("builds a calendar-year heatmap from Th1 to Th12", () => {
     const now = new Date("2026-08-11T10:00:00+07:00");
-    const { weeks, total } = buildQuestHeatmap(
-      [{ dayKey: "2026-08-11" }, { dayKey: "2026-08-11" }, { dayKey: "2026-08-10" }],
+    const { weeks, total, year } = buildQuestHeatmap(
+      [
+        { dayKey: "2026-01-02" },
+        { dayKey: "2026-08-11" },
+        { dayKey: "2026-08-11" },
+        { dayKey: "2026-08-10" },
+        { dayKey: "2025-12-31" },
+      ],
       now,
     );
-    expect(weeks).toHaveLength(53);
+    expect(year).toBe(2026);
     expect(weeks[0]?.days).toHaveLength(7);
-    expect(total).toBe(3);
-    const today = weeks.at(-1)?.days.find((d) => d.key === "2026-08-11");
+    expect(weeks[0]?.monthLabel).toBe("Th1");
+    expect(total).toBe(4);
+    const jan2 = weeks.flatMap((w) => w.days).find((d) => d.key === "2026-01-02");
+    expect(jan2?.count).toBe(1);
+    expect(jan2?.empty).toBe(false);
+    const today = weeks.flatMap((w) => w.days).find((d) => d.key === "2026-08-11");
     expect(today?.count).toBe(2);
+    const future = weeks.flatMap((w) => w.days).find((d) => d.key === "2026-12-31");
+    expect(future?.empty).toBe(true);
+    const outside = weeks.flatMap((w) => w.days).find((d) => d.key === "2025-12-31");
+    expect(outside?.empty).toBe(true);
   });
 });

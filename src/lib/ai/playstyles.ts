@@ -83,7 +83,10 @@ function scoreMatchForStyles(log: string, me: string, opp: string, turnCount: nu
     /* partial log */
   }
 
-  const wentFirstMe = new RegExp(`${p} decided to go first`, "i").test(log);
+  const wentFirstMe =
+    parsed?.wentFirst?.toLowerCase() === me.toLowerCase() ||
+    new RegExp(`${p} decided to go first`, "i").test(log) ||
+    new RegExp(`${escapeRegExp(opp)} decided to go second`, "i").test(log);
   const signals = analyzeMatchSignals(log, parsed, me, opp, wentFirstMe, turnCount);
 
   const myBoss = countInLog(log, new RegExp(`${p} played Boss's Orders`, "gi"));

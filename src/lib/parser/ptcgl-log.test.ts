@@ -54,4 +54,23 @@ Knocked Out all your opponent's Pokémon in play and took all your Prize cards. 
     expect(parsed.resultReason).toBe("standard");
     expect(resolveMatchResult(parsed, "Fairy_VN").result).toBe("win");
   });
+
+  it("detects went-first when opponent decided to go second", () => {
+    const raw = `
+thapriceisright chose tails for the opening coin flip.
+thapriceisright won the coin toss.
+thapriceisright decided to go second.
+Fairy_VN played Staryu to the Active Spot.
+Fairy_VN's Turn
+Fairy_VN ended their turn.
+thapriceisright's Turn
+thapriceisright ended their turn.
+Opponent conceded. Fairy_VN wins.
+`.trim();
+    const parsed = parseBattleLog(raw);
+    expect(parsed.wentFirst).toBe("Fairy_VN");
+    const result = resolveMatchResult(parsed, "Fairy_VN");
+    expect(result.wentFirst).toBe("Fairy_VN");
+    expect(result.opponentName).toBe("thapriceisright");
+  });
 });

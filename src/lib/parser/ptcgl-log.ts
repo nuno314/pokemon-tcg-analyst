@@ -74,7 +74,11 @@ function classifyEvent(text: string): { type: BattleEventType; payload?: Record<
   }
   if (/decided to go first/i.test(t)) {
     const m = t.match(/^(.+?)\s+decided to go first/i);
-    return { type: "go_first", payload: { player: m?.[1] } };
+    return { type: "go_first", payload: { player: m?.[1], choice: "first" } };
+  }
+  if (/decided to go second/i.test(t)) {
+    const m = t.match(/^(.+?)\s+decided to go second/i);
+    return { type: "go_first", payload: { player: m?.[1], choice: "second" } };
   }
   if (/drew /i.test(t)) {
     return { type: "draw" };
@@ -134,6 +138,9 @@ function collectPlayers(lines: string[]): string[] {
     const first = line.match(/^(.+?)\s+decided to go first/i);
     if (first) names.add(first[1].trim());
 
+    const second = line.match(/^(.+?)\s+decided to go second/i);
+    if (second) names.add(second[1].trim());
+
     const coin = line.match(/^(.+?)\s+won the coin toss/i);
     if (coin) names.add(coin[1].trim());
 
@@ -153,6 +160,7 @@ export function parseBattleLog(raw: string): ParsedBattleLog {
   let currentEvent: ParsedBattleEvent | null = null;
   let turnCounter = 0;
   let wentFirst: string | null = null;
+  let wentSecondChooser: string | null = null;
   let winner: string | null = null;
   let resultReason: string | null = null;
 
@@ -173,7 +181,12 @@ export function parseBattleLog(raw: string): ParsedBattleLog {
     currentEvent = { type, text, children: [], payload };
 
     if (type === "go_first" && payload?.player) {
-      wentFirst = String(payload.player);
+      const chooser = String(payload.player);
+      if (payload.choice === "second") {
+        wentSecondChooser = chooser;
+      } else {
+        wentFirst = chooser;
+      }
     }
     if ((type === "concede" || type === "win") && payload?.winner) {
       winner = resolveWinnerName(String(payload.winner), players);
@@ -252,6 +265,14 @@ export function parseBattleLog(raw: string): ParsedBattleLog {
 
   if (players.length < 2) {
     throw new Error("Could not identify both players from the battle log");
+  }
+
+  if (!wentFirst && wentSecondChooser) {
+    wentFirst =
+      players.find((p) => p.toLowerCase() !== wentSecondChooser!.toLowerCase()) ?? null;
+  }
+  if (!wentFirst && turns[0]?.player) {
+    wentFirst = turns[0].player;
   }
 
   return {

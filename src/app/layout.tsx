@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import { FloatingMascots } from "@/components/FloatingMascots";
+import { LocaleProvider } from "@/components/LocaleProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { getDictionary, getLocale, localeToHtmlLang } from "@/lib/i18n/server";
 import "./globals.css";
 
 const display = Fredoka({
@@ -16,10 +18,13 @@ const body = Nunito({
   weight: ["400", "500", "600", "700", "800"],
 });
 
-export const metadata: Metadata = {
-  title: "PTCGL Tracker",
-  description: "Import battle log PTCG Live, theo dõi win rate và phân tích AI.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = getDictionary(await getLocale());
+  return {
+    title: dict.brand,
+    description: dict.metaDescription,
+  };
+}
 
 const themeBootScript = `
 (() => {
@@ -33,17 +38,25 @@ const themeBootScript = `
 })();
 `;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
+
   return (
-    <html lang="vi" className={`${display.variable} ${body.variable} h-full antialiased`} suppressHydrationWarning>
+    <html
+      lang={localeToHtmlLang(locale)}
+      className={`${display.variable} ${body.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="relative min-h-full flex flex-col overflow-x-hidden">
-        <ThemeProvider>
-          <FloatingMascots />
-          <div className="relative z-[1] flex min-h-full flex-1 flex-col">{children}</div>
-        </ThemeProvider>
+        <LocaleProvider locale={locale}>
+          <ThemeProvider>
+            <FloatingMascots />
+            <div className="relative z-[1] flex min-h-full flex-1 flex-col">{children}</div>
+          </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

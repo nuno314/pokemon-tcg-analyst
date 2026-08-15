@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { StreamDocument } from "@/components/ai/Typewriter";
-import { t } from "@/lib/i18n/vi";
+import { useTranslations } from "@/components/LocaleProvider";
 
 type Analysis = {
   summary: string;
@@ -28,7 +28,7 @@ export function MatchAiAnalyst({
   matchId: string;
   initial: Analysis | null;
 }) {
-  const dict = t();
+  const dict = useTranslations();
   const [analysis, setAnalysis] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,9 +95,7 @@ export function MatchAiAnalyst({
           <StreamDocument blocks={blocks} enabled={stream} />
         </div>
       ) : (
-        <p className="text-sm text-[var(--muted)]">
-          Bấm AI Analyst để nhận xét điểm tốt, lỗi hay gặp, hướng xử lý và lưu ý đối thủ.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{dict.match.aiAnalystHint}</p>
       )}
     </section>
   );

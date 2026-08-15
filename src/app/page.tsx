@@ -1,16 +1,18 @@
 import Link from "next/link";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { HOME_MASCOTS } from "@/components/FloatingMascots";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { getSession } from "@/lib/session";
-import { t } from "@/lib/i18n/vi";
 
 export default async function HomePage() {
   const session = await getSession();
-  const dict = t();
+  const dict = await getServerDictionary();
 
   return (
     <main className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-16">
-      <div className="absolute right-4 top-4 z-10">
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        <LanguageSelector />
         <ThemeToggle />
       </div>
 

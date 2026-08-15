@@ -5,7 +5,7 @@ import { deckCards, decks, matchAnalyses, matchEvents, matches, matchTurns, play
 import { parseDeckList } from "../parser/deck-list";
 import { parseBattleLog, resolveMatchResult } from "../parser/ptcgl-log";
 import type { MatchAnalysisResult, PlayerAssessmentResult } from "../ai/analyze";
-import { PLAYER_ASSESSMENT_MIN_MATCHES } from "../i18n/vi";
+import { PLAYER_ASSESSMENT_MIN_MATCHES } from "../i18n/constants";
 
 export function hashLog(raw: string) {
   return createHash("sha256").update(raw.trim()).digest("hex");

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { t } from "@/lib/i18n/vi";
+import { useTranslations } from "@/components/LocaleProvider";
 
 type ProfileNameFormProps = {
   initialName?: string;
@@ -14,7 +14,7 @@ export function ProfileNameForm({
   mode = "onboarding",
 }: ProfileNameFormProps) {
   const router = useRouter();
-  const dict = t();
+  const dict = useTranslations();
   const copy = mode === "settings" ? dict.settings : dict.onboarding;
   const [ptcglName, setPtcglName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);

@@ -1,3 +1,4 @@
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { ProfileNameForm } from "@/components/ProfileNameForm";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { getProfile, requireSession } from "@/lib/session";
@@ -10,7 +11,8 @@ export default async function OnboardingPage() {
 
   return (
     <main className="relative mx-auto flex min-h-screen w-full items-center px-4 py-12">
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        <LanguageSelector />
         <ThemeToggle />
       </div>
       <ProfileNameForm mode="onboarding" />

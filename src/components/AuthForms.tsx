@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "@/components/LocaleProvider";
 import { authClient } from "@/lib/auth-client";
-import { t } from "@/lib/i18n/vi";
 
 export function LoginForm() {
   const router = useRouter();
-  const dict = t();
+  const dict = useTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export function LoginForm() {
 
 export function RegisterForm() {
   const router = useRouter();
-  const dict = t();
+  const dict = useTranslations();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

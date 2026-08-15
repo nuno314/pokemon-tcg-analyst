@@ -8,7 +8,8 @@ import { MatchTimelineFull } from "@/components/matches/MatchTimeline";
 import { MatchUserNote } from "@/components/matches/MatchUserNote";
 import { getMatchAnalysis, getMatchDetail } from "@/lib/db/queries";
 import { formatEndReason } from "@/lib/parser/result-labels";
-import { t } from "@/lib/i18n/vi";
+import { localeToDateLocale } from "@/lib/i18n";
+import { getLocale, getServerDictionary } from "@/lib/i18n/server";
 import { requireProfile } from "@/lib/session";
 
 export default async function MatchDetailPage({
@@ -21,7 +22,9 @@ export default async function MatchDetailPage({
   const detail = await getMatchDetail(session.user.id, id);
   if (!detail) notFound();
   const analysis = await getMatchAnalysis(session.user.id, id);
-  const dict = t();
+  const locale = await getLocale();
+  const dict = await getServerDictionary();
+  const dateLocale = localeToDateLocale(locale);
 
   const { match, turns, events } = detail;
   const setupEvents = events.filter((e) => !e.turnId);
@@ -59,9 +62,9 @@ export default async function MatchDetailPage({
                 </>
               ) : null}
               {dict.match.wentFirst}: {match.wentFirst ?? "—"} · {dict.match.end}:{" "}
-              {formatEndReason(match.resultReason)}
+              {formatEndReason(match.resultReason, dict.resultLabels)}
               {match.winner ? ` · ${dict.match.winner}: ${match.winner}` : ""}
-              {match.importedAt ? ` · ${new Date(match.importedAt).toLocaleString("vi-VN")}` : ""}
+              {match.importedAt ? ` · ${new Date(match.importedAt).toLocaleString(dateLocale)}` : ""}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

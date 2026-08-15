@@ -1,13 +1,13 @@
 import { AppNav } from "@/components/AppNav";
 import { ImportForm } from "@/components/matches/ImportForm";
 import { listDecks } from "@/lib/db/queries";
-import { t } from "@/lib/i18n/vi";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { requireProfile } from "@/lib/session";
 
 export default async function ImportMatchPage() {
   const { session, profile } = await requireProfile();
   const decks = await listDecks(session.user.id);
-  const dict = t();
+  const dict = await getServerDictionary();
 
   return (
     <div>

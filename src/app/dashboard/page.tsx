@@ -17,7 +17,7 @@ import {
 import { enrichMatchListItems } from "@/lib/matches/enrich-list";
 import { buildQuestHeatmap, dayKey, dayStartUtc } from "@/lib/quests/calendar";
 import { generateQuestBoard } from "@/lib/quests/generate";
-import { t } from "@/lib/i18n/vi";
+import { getLocale, getServerDictionary } from "@/lib/i18n/server";
 import { requireProfile } from "@/lib/session";
 
 export default async function DashboardPage({
@@ -28,7 +28,8 @@ export default async function DashboardPage({
   const { session, profile } = await requireProfile();
   const sp = await searchParams;
   const range = (["all", "7d", "30d"].includes(sp.range ?? "") ? sp.range : "all") as RangeFilter;
-  const dict = t();
+  const locale = await getLocale();
+  const dict = await getServerDictionary();
 
   await repairUserMatches(session.user.id, profile.ptcglName);
 
@@ -53,6 +54,7 @@ export default async function DashboardPage({
     matches: allMatches,
     analysisCount: analysisToday,
     deckCount: decks.length,
+    locale,
     now,
   });
   const completions = questBoard.unlocked
@@ -113,18 +115,21 @@ export default async function DashboardPage({
                 wins={stats.wins}
                 losses={stats.losses}
                 winRate={stats.winRate}
+                gamesLine={dict.dashboard.gamesLine}
               />
               <WinRateCard
                 title={dict.dashboard.goingFirst}
                 wins={stats.first.wins}
                 losses={stats.first.total - stats.first.wins}
                 winRate={stats.first.winRate}
+                gamesLine={dict.dashboard.gamesLine}
               />
               <WinRateCard
                 title={dict.dashboard.goingSecond}
                 wins={stats.second.wins}
                 losses={stats.second.total - stats.second.wins}
                 winRate={stats.second.winRate}
+                gamesLine={dict.dashboard.gamesLine}
               />
             </div>
 

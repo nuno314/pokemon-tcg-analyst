@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { OpponentDeckIcons } from "@/components/matches/OpponentDeckIcons";
 import { formatEndReason } from "@/lib/parser/result-labels";
-import { t } from "@/lib/i18n/vi";
+import { getDictionary, localeToDateLocale } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export type MatchListItem = {
   id: string;
@@ -15,18 +16,21 @@ export type MatchListItem = {
   opponentIconIds?: number[];
 };
 
-export function MatchList({
+export async function MatchList({
   matches,
   compact = false,
 }: {
   matches: MatchListItem[];
   compact?: boolean;
 }) {
-  const dict = t();
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
+  const dateLocale = localeToDateLocale(locale);
+
   if (matches.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-sm text-[var(--muted)]">
-        Chưa có trận.{" "}
+        {dict.dashboard.noGamesHint}{" "}
         <Link href="/matches/import" className="text-[var(--accent)] underline-offset-2 hover:underline">
           {dict.dashboard.importLog}
         </Link>
@@ -59,8 +63,8 @@ export function MatchList({
                   {" · "}
                   {m.deckName ?? dict.dashboard.yourDeckUnset}
                   {" · "}
-                  {formatEndReason(m.resultReason)}
-                  {m.importedAt ? ` · ${new Date(m.importedAt).toLocaleString("vi-VN")}` : ""}
+                  {formatEndReason(m.resultReason, dict.resultLabels)}
+                  {m.importedAt ? ` · ${new Date(m.importedAt).toLocaleString(dateLocale)}` : ""}
                 </p>
               </div>
               <span

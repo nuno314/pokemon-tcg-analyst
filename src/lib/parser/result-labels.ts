@@ -1,14 +1,19 @@
+import type { Dictionary } from "@/lib/i18n/types";
+
 /** How the match ended (not W/L for the user). */
 export type EndReason = "concede" | "standard";
 
-export function formatEndReason(reason: string | null | undefined): string {
+export function formatEndReason(
+  reason: string | null | undefined,
+  labels: Dictionary["resultLabels"],
+): string {
   switch (reason) {
     case "concede":
-      return "Đối thủ/concede";
+      return labels.concede;
     case "standard":
     case "win":
-      return "Kết thúc chuẩn (KO/prize)";
+      return labels.standard;
     default:
-      return reason?.trim() ? reason : "Không rõ";
+      return reason?.trim() ? reason : labels.unknown;
   }
 }

@@ -2,11 +2,11 @@ import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
 import { ProfileNameForm } from "@/components/ProfileNameForm";
 import { requireProfile } from "@/lib/session";
-import { t } from "@/lib/i18n/vi";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export default async function SettingsPage() {
   const { profile } = await requireProfile();
-  const dict = t();
+  const dict = await getServerDictionary();
 
   return (
     <div>

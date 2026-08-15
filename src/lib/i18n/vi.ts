@@ -1,5 +1,8 @@
-export const vi = {
+import type { Dictionary } from "./types";
+
+export const vi: Dictionary = {
   brand: "PTCGL Tracker",
+  metaDescription: "Import battle log PTCG Live, theo dõi win rate và phân tích AI.",
   nav: {
     dashboard: "Tổng quan",
     decks: "Deck",
@@ -53,19 +56,32 @@ export const vi = {
     goingFirst: "Đi trước",
     goingSecond: "Đi sau",
     games: "trận",
+    gamesLine: (wins, losses, total) => `${wins}W – ${losses}L (${total} trận)`,
     winRateByDeck: "Win rate theo deck",
     newDeck: "Deck mới",
     noGames: "Chưa có trận",
+    noGamesHint: "Chưa có trận.",
     createDeckHint: "Tạo deck để theo dõi win rate theo list.",
     recentMatches: "Trận gần đây",
     importLog: "Import log",
     opponentDeckUnknown: "Deck đối thủ chưa rõ",
     yourDeckUnset: "Chưa gắn deck",
     playerStyle: "Phong cách chơi (AI)",
-    playerStyleNeed: (n: number, need: number) =>
+    playerStyleNeed: (n, need) =>
       `Cần ít nhất ${need} trận để đánh giá. Hiện có ${n}/${need}.`,
+    playerStyleBasedOn: (n, need) =>
+      `Dựa trên ${n} trận (tối thiểu ${need}).`,
+    playerStyleEvaluate: "Đánh giá AI",
     playerStyleRefresh: "Cập nhật đánh giá",
     playerStyleGenerating: "Đang phân tích…",
+  },
+  playerStyle: {
+    mainStyle: "Phong cách chính",
+    tempo: "Tempo",
+    summary: "Tóm tắt",
+    strengths: "Điểm mạnh",
+    weaknesses: "Điểm yếu",
+    focus: "Nên tập trung",
   },
   match: {
     dashboard: "Tổng quan",
@@ -77,6 +93,8 @@ export const vi = {
     aiAnalyst: "AI Analyst",
     aiAnalyzing: "Đang phân tích…",
     aiAgain: "Phân tích lại",
+    aiAnalystHint:
+      "Bấm AI Analyst để nhận xét điểm tốt, lỗi hay gặp, hướng xử lý và lưu ý đối thủ.",
     setup: "Setup",
     turn: "Turn",
     good: "Điểm tốt",
@@ -99,11 +117,101 @@ export const vi = {
     delete: "Xóa",
     empty: "Chưa có deck. Paste list PTCGL/Limitless để tạo.",
     matchesWithDeck: "Trận dùng deck này",
+    cardsLine: (total, p, t, e) => `${total} cards · ${p}P / ${t}T / ${e}E`,
+    noMatchesYet: "Chưa có trận",
+    winRateLine: (pct, wins, losses) => `${pct}% win rate (${wins}W-${losses}L)`,
   },
   import: {
     title: "Import battle log",
     hint: "Export từ màn kết quả PTCGL (clipboard), dán vào đây và chọn deck.",
     matching: "Người chơi khớp",
+    deckUsed: "Deck đã dùng",
+    noDeck: "Không chọn deck",
+    uploadTxt: "Upload .txt",
+    pasteLog: "Hoặc dán battle log",
+    importing: "Đang import…",
+    saveMatch: "Lưu trận",
+    previewEmpty: "Dán hoặc upload battle log PTCGL để xem trước.",
+    you: "Bạn",
+    opponent: "Đối thủ",
+    result: "Kết quả",
+    winner: "Người thắng",
+    turns: "Turn",
+    setupEvents: "Sự kiện setup",
+    importFailed: "Import thất bại",
+    parseFailed: "Parse thất bại",
+  },
+  quests: {
+    lockedTitle: "Quest luyện tập",
+    lockedHint: (need, count) =>
+      `Cần ít nhất ${need} trận để mở quest ngày. Hiện có ${count}/${need}. Reset 00:00 GMT+7.`,
+    todayTitle: "Quest luyện tập hôm nay",
+    todayHint: (completed, total) =>
+      `Hết hạn 00:00 GMT+7 · ${completed}/${total} quest trong ngày`,
+    noteLabel: "Ghi chú",
+    done: "Xong",
+    resetIn: (remaining) => `Reset sau ${remaining}`,
+    resetting: "đang reset…",
+    heatmapTitle: (total, year) => `${total} quest hoàn thành năm ${year}`,
+    heatmapDayTitle: (key, count) => `${key}: ${count} quest`,
+    less: "Ít",
+    more: "Nhiều",
+    weekdayLabels: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"],
+    pool: {
+      win_today: {
+        title: "Thắng 1 trận hôm nay",
+        detail: "Import 1 trận thắng trong ngày.",
+      },
+      import_two: {
+        title: "Import 2 trận hôm nay",
+        detail: "Ghi lại 2 trận trong ngày để quest và win rate cập nhật.",
+      },
+      win_first: {
+        title: "Thắng khi đi trước",
+        detail: "Hôm nay thắng 1 trận mà bạn đi trước.",
+      },
+      win_second: {
+        title: "Thắng khi đi sau",
+        detail: "Hôm nay thắng 1 trận khi đối thủ đi trước.",
+      },
+      win_concede: {
+        title: "Thắng nhờ concede",
+        detail: "Import 1 trận thắng khi đối thủ concede hôm nay.",
+      },
+      win_standard: {
+        title: "Thắng kết thúc chuẩn",
+        detail: "Hôm nay thắng bằng KO / lấy hết prize (không concede).",
+      },
+      attach_deck: {
+        title: "Gắn deck khi import",
+        detail: "Import 1 trận hôm nay có chọn deck đã dùng.",
+      },
+      analyze_one: {
+        title: "Chạy AI Analyst hôm nay",
+        detail: "Mở 1 trận và bấm AI Analyst trong ngày.",
+      },
+      win_streak_2: {
+        title: "Chuỗi 2 trận thắng",
+        detail: "Hôm nay import 2 trận thắng liên tiếp.",
+      },
+    },
+    notes: {
+      lock: (need) => `Cần ${need} trận tổng để mở quest ngày. Quest reset 00:00 GMT+7.`,
+      done: "Xong hết quest hôm nay — mai reset bộ mới lúc 00:00 GMT+7.",
+      import: "Chưa có trận nào hôm nay — import log để làm quest trong ngày.",
+      deck: "Tạo deck rồi gắn khi import để quest gắn deck và win rate theo list đúng.",
+      go: (remaining, total) =>
+        `Còn ${remaining}/${total} quest hôm nay. Hết hạn lúc 00:00 GMT+7.`,
+    },
+  },
+  resultLabels: {
+    concede: "Đối thủ/concede",
+    standard: "Kết thúc chuẩn (KO/prize)",
+    unknown: "Không rõ",
+  },
+  theme: {
+    lightMode: "Bật light mode",
+    darkMode: "Bật dark mode",
   },
   common: {
     win: "Thắng",
@@ -111,13 +219,13 @@ export const vi = {
     loading: "Đang tải…",
     error: "Có lỗi xảy ra",
   },
-} as const;
-
-export type Dictionary = typeof vi;
-
-export function t() {
-  return vi;
-}
-
-/** Ngưỡng tối thiểu để AI đánh giá phong cách chơi trên dashboard. */
-export const PLAYER_ASSESSMENT_MIN_MATCHES = 10;
+  api: {
+    playerAssessmentNeed: (need, count) =>
+      `Cần ít nhất ${need} trận (hiện có ${count}).`,
+    failed: "Thất bại",
+    aiAssessmentFailed: "Đánh giá AI thất bại",
+  },
+  language: {
+    label: "Ngôn ngữ",
+  },
+};

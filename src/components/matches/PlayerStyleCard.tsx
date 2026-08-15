@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { StreamDocument } from "@/components/ai/Typewriter";
-import { PLAYER_ASSESSMENT_MIN_MATCHES, t } from "@/lib/i18n/vi";
+import { useTranslations } from "@/components/LocaleProvider";
+import { PLAYER_ASSESSMENT_MIN_MATCHES } from "@/lib/i18n";
 
 type Assessment = {
   matchCount?: number;
@@ -60,7 +61,7 @@ export function PlayerStyleCard({
 }: {
   matchCount: number;
 }) {
-  const dict = t();
+  const dict = useTranslations();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,19 +94,23 @@ export function PlayerStyleCard({
   const blocks = useMemo(() => {
     if (!assessment) return [];
     const items: { key: string; title: string; body?: string; items?: string[] }[] = [
-      { key: "arch", title: "Phong cách chính", body: assessment.playStyle ?? assessment.archetype },
+      {
+        key: "arch",
+        title: dict.playerStyle.mainStyle,
+        body: assessment.playStyle ?? assessment.archetype,
+      },
     ];
     if (assessment.tempo) {
-      items.push({ key: "tempo", title: "Tempo", body: assessment.tempo });
+      items.push({ key: "tempo", title: dict.playerStyle.tempo, body: assessment.tempo });
     }
     items.push(
-      { key: "sum", title: "Tóm tắt", body: assessment.summary },
-      { key: "str", title: "Điểm mạnh", items: parseList(assessment.strengths) },
-      { key: "weak", title: "Điểm yếu", items: parseList(assessment.weaknesses) },
-      { key: "focus", title: "Nên tập trung", items: parseList(assessment.focus) },
+      { key: "sum", title: dict.playerStyle.summary, body: assessment.summary },
+      { key: "str", title: dict.playerStyle.strengths, items: parseList(assessment.strengths) },
+      { key: "weak", title: dict.playerStyle.weaknesses, items: parseList(assessment.weaknesses) },
+      { key: "focus", title: dict.playerStyle.focus, items: parseList(assessment.focus) },
     );
     return items;
-  }, [assessment]);
+  }, [assessment, dict.playerStyle]);
 
   return (
     <section className="ui-card p-5">
@@ -116,7 +121,7 @@ export function PlayerStyleCard({
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {ready
-              ? `Dựa trên ${matchCount} trận (tối thiểu ${PLAYER_ASSESSMENT_MIN_MATCHES}).`
+              ? dict.dashboard.playerStyleBasedOn(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)
               : dict.dashboard.playerStyleNeed(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)}
           </p>
         </div>
@@ -130,7 +135,7 @@ export function PlayerStyleCard({
             ? dict.dashboard.playerStyleGenerating
             : assessment
               ? dict.dashboard.playerStyleRefresh
-              : "Đánh giá AI"}
+              : dict.dashboard.playerStyleEvaluate}
         </button>
       </div>
 

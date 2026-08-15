@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslations } from "@/components/LocaleProvider";
 
 type Theme = "light" | "dark";
 
@@ -58,12 +59,13 @@ export function useTheme() {
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, toggle } = useTheme();
+  const dict = useTranslations();
   const dark = theme === "dark";
   return (
     <button
       type="button"
       onClick={toggle}
-      aria-label={dark ? "Bật light mode" : "Bật dark mode"}
+      aria-label={dark ? dict.theme.lightMode : dict.theme.darkMode}
       title={dark ? "Light mode" : "Dark mode"}
       className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-sm transition hover:bg-[var(--wash)] ${className}`}
     >

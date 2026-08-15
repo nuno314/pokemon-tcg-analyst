@@ -3,8 +3,9 @@ import type { QuestHeatmapWeek } from "@/lib/quests/calendar";
 import type { QuestBoardData } from "@/lib/quests/generate";
 import { QuestProgressChart } from "@/components/matches/QuestProgressChart";
 import { QuestResetCountdown } from "@/components/matches/QuestResetCountdown";
+import { getServerDictionary } from "@/lib/i18n/server";
 
-export function QuestBoard({
+export async function QuestBoard({
   board,
   heatmap,
   year,
@@ -13,13 +14,14 @@ export function QuestBoard({
   heatmap: QuestHeatmapWeek[];
   year: number;
 }) {
+  const dict = await getServerDictionary();
+
   if (!board.unlocked) {
     return (
       <section className="ui-card p-5">
-        <h2 className="font-display text-xl text-[var(--ink)]">Quest luyện tập</h2>
+        <h2 className="font-display text-xl text-[var(--ink)]">{dict.quests.lockedTitle}</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Cần ít nhất {board.need} trận để mở quest ngày. Hiện có {board.matchCount}/
-          {board.need}. Reset 00:00 GMT+7.
+          {dict.quests.lockedHint(board.need, board.matchCount)}
         </p>
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--wash)]">
           <div
@@ -37,15 +39,15 @@ export function QuestBoard({
     <section className="ui-card space-y-4 p-5">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="font-display text-xl text-[var(--ink)]">Quest luyện tập hôm nay</h2>
+          <h2 className="font-display text-xl text-[var(--ink)]">{dict.quests.todayTitle}</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Hết hạn 00:00 GMT+7 · {board.completedCount}/{board.dailyTarget} quest trong ngày
+            {dict.quests.todayHint(board.completedCount, board.dailyTarget)}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <QuestResetCountdown resetsAt={board.resetsAt} />
           <Link href="/matches/import" className="text-sm text-[var(--accent)] hover:underline">
-            Import log
+            {dict.dashboard.importLog}
           </Link>
         </div>
       </div>
@@ -57,7 +59,7 @@ export function QuestBoard({
               key={n.id}
               className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--wash)] px-3 py-2 text-sm text-[var(--ink)]"
             >
-              <span className="mr-1 font-semibold text-[var(--accent)]">Note</span>
+              <span className="mr-1 font-semibold text-[var(--accent)]">{dict.quests.noteLabel}</span>
               {n.text}
             </li>
           ))}
@@ -82,7 +84,7 @@ export function QuestBoard({
                     q.done ? "badge-win" : "bg-[var(--wash)] text-[var(--muted)]"
                   }`}
                 >
-                  {q.done ? "Xong" : `${q.progress}/${q.target}`}
+                  {q.done ? dict.quests.done : `${q.progress}/${q.target}`}
                 </span>
               </div>
               <p className="mt-1 text-sm text-[var(--muted)]">{q.detail}</p>
@@ -99,7 +101,7 @@ export function QuestBoard({
         ))}
       </ul>
 
-      <QuestProgressChart weeks={heatmap} year={year} />
+      <QuestProgressChart weeks={heatmap} year={year} dict={dict.quests} />
     </section>
   );
 }

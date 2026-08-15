@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { t } from "@/lib/i18n/vi";
+import { useTranslations } from "@/components/LocaleProvider";
 
 export function MatchUserNote({
   matchId,
@@ -10,7 +10,7 @@ export function MatchUserNote({
   matchId: string;
   initialNote?: string;
 }) {
-  const dict = t();
+  const dict = useTranslations();
   const [note, setNote] = useState(initialNote);
   const [savedNote, setSavedNote] = useState(initialNote);
   const [loading, setLoading] = useState(false);

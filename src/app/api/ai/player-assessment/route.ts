@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { assessPlayerWithAi } from "@/lib/ai/analyze";
+import { getDictionary } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import {
   PLAYER_ASSESSMENT_MIN_MATCHES,
   countUserMatches,
@@ -25,8 +27,9 @@ export async function GET() {
       minMatches: PLAYER_ASSESSMENT_MIN_MATCHES,
     });
   } catch (e) {
+    const dict = getDictionary(await getLocale());
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Failed" },
+      { error: e instanceof Error ? e.message : dict.api.failed },
       { status: 500 },
     );
   }
@@ -36,13 +39,14 @@ export async function POST(request: Request) {
   try {
     const authz = await requireApiProfile();
     if (!authz.ok) return authz.response;
+    const dict = getDictionary(await getLocale());
     const body = (await request.json().catch(() => ({}))) as { force?: boolean };
 
     const matchCount = await countUserMatches(authz.session.user.id);
     if (matchCount < PLAYER_ASSESSMENT_MIN_MATCHES) {
       return NextResponse.json(
         {
-          error: `Cần ít nhất ${PLAYER_ASSESSMENT_MIN_MATCHES} trận (hiện có ${matchCount}).`,
+          error: dict.api.playerAssessmentNeed(PLAYER_ASSESSMENT_MIN_MATCHES, matchCount),
           matchCount,
           minMatches: PLAYER_ASSESSMENT_MIN_MATCHES,
         },
@@ -88,8 +92,9 @@ export async function POST(request: Request) {
     const saved = await savePlayerAssessment(authz.session.user.id, matchCount, assessed);
     return NextResponse.json({ assessment: saved, cached: false, matchCount });
   } catch (e) {
+    const dict = getDictionary(await getLocale());
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "AI assessment failed" },
+      { error: e instanceof Error ? e.message : dict.api.aiAssessmentFailed },
       { status: 400 },
     );
   }

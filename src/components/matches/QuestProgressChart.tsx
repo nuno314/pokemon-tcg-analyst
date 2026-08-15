@@ -1,6 +1,5 @@
 import type { QuestHeatmapWeek } from "@/lib/quests/calendar";
-
-const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+import type { Dictionary } from "@/lib/i18n/types";
 
 function cellClass(count: number, empty: boolean) {
   if (empty) return "bg-transparent";
@@ -14,9 +13,11 @@ function cellClass(count: number, empty: boolean) {
 export function QuestProgressChart({
   weeks,
   year,
+  dict,
 }: {
   weeks: QuestHeatmapWeek[];
   year: number;
+  dict: Dictionary["quests"];
 }) {
   const total = weeks.reduce(
     (sum, w) => sum + w.days.reduce((s, d) => s + (d.empty ? 0 : d.count), 0),
@@ -26,7 +27,7 @@ export function QuestProgressChart({
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--wash)] p-3">
       <p className="mb-2 text-sm font-medium text-[var(--ink)]">
-        {total} quest hoàn thành năm {year}
+        {dict.heatmapTitle(total, year)}
       </p>
 
       <div
@@ -49,7 +50,7 @@ export function QuestProgressChart({
           </div>
         ))}
 
-        {WEEKDAY_LABELS.map((label, di) => (
+        {dict.weekdayLabels.map((label, di) => (
           <div key={label} className="contents">
             <span className="flex items-center justify-end pr-0.5 text-[9px] leading-none text-[var(--muted)]">
               {di % 2 === 1 ? label : ""}
@@ -61,7 +62,7 @@ export function QuestProgressChart({
                 <div
                   key={day.key}
                   className={`aspect-square min-h-0 min-w-0 rounded-[2px] ${cellClass(day.count, day.empty)}`}
-                  title={day.empty ? undefined : `${day.key}: ${day.count} quest`}
+                  title={day.empty ? undefined : dict.heatmapDayTitle(day.key, day.count)}
                 />
               );
             })}
@@ -70,11 +71,11 @@ export function QuestProgressChart({
       </div>
 
       <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[var(--muted)]">
-        <span>Ít</span>
+        <span>{dict.less}</span>
         {[0, 1, 2, 3, 4].map((n) => (
           <span key={n} className={`size-2.5 rounded-[2px] ${cellClass(n, false)}`} />
         ))}
-        <span>Nhiều</span>
+        <span>{dict.more}</span>
       </div>
     </div>
   );

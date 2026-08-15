@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslations } from "@/components/LocaleProvider";
 import { ThemeToggle } from "@/components/ThemeProvider";
-import { t } from "@/lib/i18n/vi";
+import { authClient } from "@/lib/auth-client";
 
 export function AppNav({ ptcglName }: { ptcglName?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
-  const dict = t();
+  const dict = useTranslations();
   const links = [
     { href: "/dashboard", label: dict.nav.dashboard },
     { href: "/decks", label: dict.nav.decks },
@@ -71,6 +72,7 @@ export function AppNav({ ptcglName }: { ptcglName?: string | null }) {
               {ptcglName}
             </Link>
           ) : null}
+          <LanguageSelector />
           <ThemeToggle />
           <button
             type="button"

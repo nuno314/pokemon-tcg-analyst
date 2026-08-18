@@ -58,11 +58,17 @@ function normalizeAssessment(row: Assessment | null): Assessment | null {
 
 export function PlayerStyleCard({
   matchCount,
+  readOnly = false,
+  initialAssessment = null,
 }: {
   matchCount: number;
+  readOnly?: boolean;
+  initialAssessment?: Assessment | null;
 }) {
   const dict = useTranslations();
-  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [assessment, setAssessment] = useState<Assessment | null>(() =>
+    normalizeAssessment(initialAssessment),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
@@ -120,26 +126,30 @@ export function PlayerStyleCard({
             {dict.dashboard.playerStyle}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            {ready
-              ? dict.dashboard.playerStyleBasedOn(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)
-              : dict.dashboard.playerStyleNeed(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)}
+            {readOnly && !assessment
+              ? dict.userProfile.noPlayStyle
+              : ready
+                ? dict.dashboard.playerStyleBasedOn(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)
+                : dict.dashboard.playerStyleNeed(matchCount, PLAYER_ASSESSMENT_MIN_MATCHES)}
           </p>
         </div>
-        <button
-          type="button"
-          disabled={!ready || loading}
-          onClick={() => run(Boolean(assessment))}
-          className="ui-btn-primary px-4 py-2 text-sm disabled:opacity-50"
-        >
-          {loading
-            ? dict.dashboard.playerStyleGenerating
-            : assessment
-              ? dict.dashboard.playerStyleRefresh
-              : dict.dashboard.playerStyleEvaluate}
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            disabled={!ready || loading}
+            onClick={() => run(Boolean(assessment))}
+            className="ui-btn-primary px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {loading
+              ? dict.dashboard.playerStyleGenerating
+              : assessment
+                ? dict.dashboard.playerStyleRefresh
+                : dict.dashboard.playerStyleEvaluate}
+          </button>
+        )}
       </div>
 
-      {!ready ? (
+      {!ready && !readOnly ? (
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--wash)]">
           <div
             className="h-full rounded-full bg-[var(--accent-2)]"

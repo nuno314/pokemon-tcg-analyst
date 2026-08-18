@@ -1,28 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
-import { MatchList } from "@/components/matches/MatchList";
-import { DeleteDeckButton } from "@/components/decks/DeleteDeckButton";
-import { ExportDeckButton } from "@/components/decks/ExportDeckButton";
 import { DeckCardGallery, DeckCardRow } from "@/components/decks/CardImages";
-import { enrichMatchListItems } from "@/lib/matches/enrich-list";
-import { getDeckWithCards, listMatches } from "@/lib/db/queries";
+import { ExportDeckButton } from "@/components/decks/ExportDeckButton";
+import { getFriendDeckWithCards, getUserPublicPreview } from "@/lib/db/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { requireProfile } from "@/lib/session";
 
-export default async function DeckDetailPage({
+export default async function FriendDeckPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; deckId: string }>;
 }) {
   const { session, profile } = await requireProfile();
   const dict = await getServerDictionary();
-  const { id } = await params;
-  const deck = await getDeckWithCards(session.user.id, id);
-  if (!deck) notFound();
-
-  const deckMatches = (await listMatches(session.user.id, "all")).filter((m) => m.deckId === id);
-  const matchListItems = enrichMatchListItems(deckMatches, new Map([[id, deck.name]]));
+  const { id, deckId } = await params;
+  const owner = await getUserPublicPreview(id);
+  const deck = await getFriendDeckWithCards(session.user.id, id, deckId);
+  if (!owner || !deck) notFound();
 
   const groups = {
     pokemon: deck.cards.filter((c) => c.category === "pokemon"),
@@ -36,10 +31,15 @@ export default async function DeckDetailPage({
       <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl text-[var(--ink)]">
-              {deck.name}
-            </h1>
+            <Link
+              href={`/users/${id}`}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              ← {dict.userProfile.backToProfile}
+            </Link>
+            <h1 className="mt-2 font-display text-3xl text-[var(--ink)]">{deck.name}</h1>
             <p className="text-sm text-[var(--muted)]">
+              {owner.ptcglName} ·{" "}
               {dict.decks.cardsLine(
                 deck.totalCards,
                 deck.pokemonCount,
@@ -48,16 +48,7 @@ export default async function DeckDetailPage({
               )}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <ExportDeckButton rawList={deck.rawList} />
-            <Link
-              href={`/decks/${deck.id}/edit`}
-              className="ui-btn-secondary px-3 py-2 text-sm"
-            >
-              {dict.decks.edit}
-            </Link>
-            <DeleteDeckButton deckId={deck.id} />
-          </div>
+          <ExportDeckButton rawList={deck.rawList} />
         </div>
 
         <DeckCardGallery title="Pokémon" cards={groups.pokemon} />
@@ -66,10 +57,7 @@ export default async function DeckDetailPage({
 
         <div className="grid gap-6 md:grid-cols-3">
           {(["pokemon", "trainer", "energy"] as const).map((cat) => (
-            <section
-              key={cat}
-              className="ui-card p-4"
-            >
+            <section key={cat} className="ui-card p-4">
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                 {cat}
               </h2>
@@ -87,13 +75,6 @@ export default async function DeckDetailPage({
             </section>
           ))}
         </div>
-
-        <section className="space-y-3">
-          <h2 className="font-display text-xl text-[var(--ink)]">
-            {dict.decks.matchesWithDeck}
-          </h2>
-          <MatchList matches={matchListItems} />
-        </section>
       </main>
     </div>
   );

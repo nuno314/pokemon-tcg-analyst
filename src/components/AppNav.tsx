@@ -15,6 +15,7 @@ export function AppNav({ ptcglName }: { ptcglName?: string | null }) {
     { href: "/dashboard", label: dict.nav.dashboard },
     { href: "/decks", label: dict.nav.decks },
     { href: "/matches/import", label: dict.nav.import },
+    { href: "/friends", label: dict.nav.friends },
     { href: "/settings", label: dict.nav.settings },
   ];
 

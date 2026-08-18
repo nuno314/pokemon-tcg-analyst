@@ -1,7 +1,20 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "./index";
-import { deckCards, decks, matchAnalyses, matchEvents, matches, matchTurns, playerAssessments, profiles, questCompletions } from "./schema";
+import {
+  deckCards,
+  decks,
+  friendships,
+  matchAnalyses,
+  matchEvents,
+  matches,
+  matchTurns,
+  playerAssessments,
+  profiles,
+  questCompletions,
+  user,
+} from "./schema";
+import type { FriendRelation, UserPreview, UserWithRelation } from "../friends";
 import { parseDeckList } from "../parser/deck-list";
 import { parseBattleLog, resolveMatchResult } from "../parser/ptcgl-log";
 import type { MatchAnalysisResult, PlayerAssessmentResult } from "../ai/analyze";
@@ -549,3 +562,285 @@ export function parseJsonStringArray(raw: string | null | undefined): string[] {
 }
 
 export { PLAYER_ASSESSMENT_MIN_MATCHES };
+export type { FriendRelation, UserPreview, UserWithRelation } from "../friends";
+
+type FriendshipRow = typeof friendships.$inferSelect;
+
+function otherUserId(row: FriendshipRow, viewerId: string) {
+  return row.requesterId === viewerId ? row.addresseeId : row.requesterId;
+}
+
+export function relationFromFriendship(
+  viewerId: string,
+  row: FriendshipRow | null,
+): FriendRelation {
+  if (!row) return "none";
+  if (row.status === "accepted") return "accepted";
+  if (row.requesterId === viewerId) return "pending_outgoing";
+  return "pending_incoming";
+}
+
+async function loadUserPreviews(userIds: string[]): Promise<Map<string, UserPreview>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({
+      userId: profiles.userId,
+      ptcglName: profiles.ptcglName,
+      displayName: user.name,
+    })
+    .from(profiles)
+    .innerJoin(user, eq(user.id, profiles.userId))
+    .where(inArray(profiles.userId, unique));
+  return new Map(rows.map((r) => [r.userId, r]));
+}
+
+function attachPreviews(
+  viewerId: string,
+  rows: FriendshipRow[],
+  previews: Map<string, UserPreview>,
+): UserWithRelation[] {
+  return rows.flatMap((row) => {
+    const oid = otherUserId(row, viewerId);
+    const preview = previews.get(oid);
+    if (!preview) return [];
+    return [
+      {
+        ...preview,
+        friendshipId: row.id,
+        relation: relationFromFriendship(viewerId, row),
+      },
+    ];
+  });
+}
+
+export async function getFriendship(userA: string, userB: string) {
+  if (userA === userB) return null;
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(
+      or(
+        and(eq(friendships.requesterId, userA), eq(friendships.addresseeId, userB)),
+        and(eq(friendships.requesterId, userB), eq(friendships.addresseeId, userA)),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function areFriends(userA: string, userB: string) {
+  const row = await getFriendship(userA, userB);
+  return row?.status === "accepted";
+}
+
+export async function getUserPublicPreview(userId: string): Promise<UserPreview | null> {
+  const rows = await db
+    .select({
+      userId: profiles.userId,
+      ptcglName: profiles.ptcglName,
+      displayName: user.name,
+    })
+    .from(profiles)
+    .innerJoin(user, eq(user.id, profiles.userId))
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function searchUsersByPtcglName(
+  q: string,
+  viewerId: string,
+  limit = 20,
+): Promise<UserWithRelation[]> {
+  const term = q.trim().replace(/[%_]/g, "");
+  if (term.length < 1) return [];
+  const pattern = `%${term.toLowerCase()}%`;
+
+  const rows = await db
+    .select({
+      userId: profiles.userId,
+      ptcglName: profiles.ptcglName,
+      displayName: user.name,
+    })
+    .from(profiles)
+    .innerJoin(user, eq(user.id, profiles.userId))
+    .where(and(ne(profiles.userId, viewerId), sql`lower(${profiles.ptcglName}) like ${pattern}`))
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.userId);
+  const links = await db
+    .select()
+    .from(friendships)
+    .where(
+      or(
+        and(eq(friendships.requesterId, viewerId), inArray(friendships.addresseeId, ids)),
+        and(eq(friendships.addresseeId, viewerId), inArray(friendships.requesterId, ids)),
+      ),
+    );
+  const byOther = new Map<string, FriendshipRow>();
+  for (const link of links) {
+    byOther.set(otherUserId(link, viewerId), link);
+  }
+
+  return rows.map((row) => {
+    const link = byOther.get(row.userId) ?? null;
+    return {
+      ...row,
+      friendshipId: link?.id ?? null,
+      relation: relationFromFriendship(viewerId, link),
+    };
+  });
+}
+
+export async function listFriends(userId: string): Promise<UserWithRelation[]> {
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(
+      and(
+        eq(friendships.status, "accepted"),
+        or(eq(friendships.requesterId, userId), eq(friendships.addresseeId, userId)),
+      ),
+    )
+    .orderBy(desc(friendships.updatedAt));
+  const previews = await loadUserPreviews(rows.map((r) => otherUserId(r, userId)));
+  return attachPreviews(userId, rows, previews);
+}
+
+export async function listPendingIncoming(userId: string): Promise<UserWithRelation[]> {
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(and(eq(friendships.addresseeId, userId), eq(friendships.status, "pending")))
+    .orderBy(desc(friendships.createdAt));
+  const previews = await loadUserPreviews(rows.map((r) => r.requesterId));
+  return attachPreviews(userId, rows, previews);
+}
+
+export async function listPendingOutgoing(userId: string): Promise<UserWithRelation[]> {
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(and(eq(friendships.requesterId, userId), eq(friendships.status, "pending")))
+    .orderBy(desc(friendships.createdAt));
+  const previews = await loadUserPreviews(rows.map((r) => r.addresseeId));
+  return attachPreviews(userId, rows, previews);
+}
+
+export async function sendFriendRequest(viewerId: string, targetUserId: string) {
+  if (viewerId === targetUserId) throw new Error("Cannot friend yourself");
+  const target = await getUserPublicPreview(targetUserId);
+  if (!target) throw new Error("User not found");
+
+  const existing = await getFriendship(viewerId, targetUserId);
+  if (existing?.status === "accepted") throw new Error("Already friends");
+  if (existing?.status === "pending" && existing.requesterId === viewerId) {
+    throw new Error("Friend request already sent");
+  }
+  if (existing?.status === "pending" && existing.addresseeId === viewerId) {
+    await db
+      .update(friendships)
+      .set({ status: "accepted", updatedAt: new Date() })
+      .where(eq(friendships.id, existing.id));
+    const updated = { ...existing, status: "accepted" as const, updatedAt: new Date() };
+    return { friendship: updated, relation: "accepted" as const };
+  }
+
+  const id = randomUUID();
+  const now = new Date();
+  const row = {
+    id,
+    requesterId: viewerId,
+    addresseeId: targetUserId,
+    status: "pending" as const,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.insert(friendships).values(row);
+  return { friendship: row, relation: "pending_outgoing" as const };
+}
+
+export async function acceptFriendRequest(viewerId: string, friendshipId: string) {
+  const rows = await db.select().from(friendships).where(eq(friendships.id, friendshipId)).limit(1);
+  const row = rows[0];
+  if (!row) throw new Error("Friend request not found");
+  if (row.addresseeId !== viewerId) throw new Error("Not allowed");
+  if (row.status !== "pending") throw new Error("Friend request is not pending");
+  await db
+    .update(friendships)
+    .set({ status: "accepted", updatedAt: new Date() })
+    .where(eq(friendships.id, friendshipId));
+  return { ...row, status: "accepted" as const, updatedAt: new Date() };
+}
+
+export async function declineFriendRequest(viewerId: string, friendshipId: string) {
+  const rows = await db.select().from(friendships).where(eq(friendships.id, friendshipId)).limit(1);
+  const row = rows[0];
+  if (!row) throw new Error("Friend request not found");
+  if (row.addresseeId !== viewerId) throw new Error("Not allowed");
+  if (row.status !== "pending") throw new Error("Friend request is not pending");
+  await db.delete(friendships).where(eq(friendships.id, friendshipId));
+}
+
+export async function removeFriendship(viewerId: string, friendshipId: string) {
+  const rows = await db.select().from(friendships).where(eq(friendships.id, friendshipId)).limit(1);
+  const row = rows[0];
+  if (!row) throw new Error("Friendship not found");
+  const isParty = row.requesterId === viewerId || row.addresseeId === viewerId;
+  if (!isParty) throw new Error("Not allowed");
+  if (row.status === "pending" && row.requesterId !== viewerId) {
+    throw new Error("Not allowed");
+  }
+  await db.delete(friendships).where(eq(friendships.id, friendshipId));
+}
+
+export async function getFriendProfile(viewerId: string, userId: string) {
+  if (!(await areFriends(viewerId, userId))) return null;
+  const preview = await getUserPublicPreview(userId);
+  if (!preview) return null;
+
+  const [stats, decks, assessment, matchCount, friendship] = await Promise.all([
+    getWinRateStats(userId, "all"),
+    listDecks(userId),
+    getPlayerAssessment(userId),
+    countUserMatches(userId),
+    getFriendship(viewerId, userId),
+  ]);
+
+  return {
+    ...preview,
+    friendshipId: friendship?.id ?? null,
+    relation: "accepted" as const,
+    matchCount,
+    stats: {
+      wins: stats.wins,
+      losses: stats.losses,
+      total: stats.total,
+      winRate: stats.winRate,
+      first: stats.first,
+      second: stats.second,
+    },
+    decks: decks.map((deck) => {
+      const bucket = stats.byDeck.get(deck.id) ?? { wins: 0, losses: 0 };
+      return {
+        id: deck.id,
+        name: deck.name,
+        totalCards: deck.totalCards,
+        pokemonCount: deck.pokemonCount,
+        trainerCount: deck.trainerCount,
+        energyCount: deck.energyCount,
+        wins: bucket.wins,
+        losses: bucket.losses,
+      };
+    }),
+    assessment,
+  };
+}
+
+export async function getFriendDeckWithCards(viewerId: string, ownerId: string, deckId: string) {
+  if (!(await areFriends(viewerId, ownerId))) return null;
+  return getDeckWithCards(ownerId, deckId);
+}

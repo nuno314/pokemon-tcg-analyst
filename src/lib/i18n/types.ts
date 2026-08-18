@@ -10,6 +10,7 @@ export type Dictionary = {
     dashboard: string;
     decks: string;
     import: string;
+    friends: string;
     settings: string;
     signOut: string;
   };
@@ -119,6 +120,38 @@ export type Dictionary = {
     cardsLine: (total: number, p: number, t: number, e: number) => string;
     noMatchesYet: string;
     winRateLine: (pct: number, wins: number, losses: number) => string;
+    copyList: string;
+    copyListDone: string;
+    copyListFailed: string;
+  };
+  friends: {
+    title: string;
+    searchLabel: string;
+    searchPlaceholder: string;
+    search: string;
+    searching: string;
+    noResults: string;
+    incoming: string;
+    outgoing: string;
+    listTitle: string;
+    empty: string;
+    emptyIncoming: string;
+    emptyOutgoing: string;
+    add: string;
+    sent: string;
+    accept: string;
+    decline: string;
+    unfriend: string;
+    unfriendConfirm: string;
+    viewProfile: string;
+  };
+  userProfile: {
+    privateHint: string;
+    decksTitle: string;
+    noDecks: string;
+    noPlayStyle: string;
+    backToFriends: string;
+    backToProfile: string;
   };
   import: {
     title: string;

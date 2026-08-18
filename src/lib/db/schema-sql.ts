@@ -156,4 +156,16 @@ CREATE TABLE IF NOT EXISTS quest_completions (
 );
 CREATE INDEX IF NOT EXISTS quest_completions_userId_dayKey_idx ON quest_completions(user_id, day_key);
 CREATE UNIQUE INDEX IF NOT EXISTS quest_completions_userId_dayKey_questId_uidx ON quest_completions(user_id, day_key, quest_id);
+
+CREATE TABLE IF NOT EXISTS friendships (
+  id TEXT PRIMARY KEY NOT NULL,
+  requester_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  addressee_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),
+  updated_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS friendships_requester_addressee_uidx ON friendships(requester_id, addressee_id);
+CREATE INDEX IF NOT EXISTS friendships_addresseeId_idx ON friendships(addressee_id);
+CREATE INDEX IF NOT EXISTS friendships_requesterId_idx ON friendships(requester_id);
 `;

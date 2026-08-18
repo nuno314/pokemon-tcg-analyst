@@ -228,6 +228,31 @@ export const questCompletions = sqliteTable(
   ],
 );
 
+export const friendships = sqliteTable(
+  "friendships",
+  {
+    id: text("id").primaryKey(),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    addresseeId: text("addressee_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["pending", "accepted"] }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`),
+  },
+  (t) => [
+    uniqueIndex("friendships_requester_addressee_uidx").on(t.requesterId, t.addresseeId),
+    index("friendships_addresseeId_idx").on(t.addresseeId),
+    index("friendships_requesterId_idx").on(t.requesterId),
+  ],
+);
+
 export const decksRelations = relations(decks, ({ many, one }) => ({
   cards: many(deckCards),
   matches: many(matches),
